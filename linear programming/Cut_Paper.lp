@@ -1,101 +1,116 @@
 \* Let's cut some rolls *\
 Minimize
-min: cut_typ_1 + cut_typ_10 + cut_typ_11 + cut_typ_12 + cut_typ_13
- + cut_typ_14 + cut_typ_15 + cut_typ_16 + cut_typ_17 + cut_typ_18 + cut_typ_19
- + cut_typ_2 + cut_typ_20 + cut_typ_21 + cut_typ_22 + cut_typ_23 + cut_typ_24
- + cut_typ_25 + cut_typ_26 + cut_typ_27 + cut_typ_28 + cut_typ_29 + cut_typ_3
- + cut_typ_30 + cut_typ_31 + cut_typ_32 + cut_typ_33 + cut_typ_34 + cut_typ_35
- + cut_typ_36 + cut_typ_37 + cut_typ_4 + cut_typ_5 + cut_typ_6 + cut_typ_7
- + cut_typ_8 + cut_typ_9
+min: five_42cms + four_42cms + one_108cm + one_108cm_four_42cms
+ + one_108cm_one_42cm + one_108cm_one_93cm + one_108cm_one_93cm_one_42cm
+ + one_108cm_one_93cm_two_42cms + one_108cm_three_42cms + one_108cm_two_42cms
+ + one_108cm_two_93cms + one_135cm + one_135cm_one_108cm
+ + one_135cm_one_108cm_one_42cm + one_135cm_one_42cm + one_135cm_one_93cm
+ + one_135cm_one_93cm_one_42cm + one_135cm_three_42cms + one_135cm_two_42cms
+ + one_42cm + one_93cm + one_93cm_four_42_cms + one_93cm_one_42cm
+ + one_93cm_three_42cms + one_93cm_two_42cms + seven_42cms + six_42cms
+ + three_42cms + three_93cms + two_108cm + two_108cms_one_42cm
+ + two_108cms_two_42cms + two_135cms + two_42cms + two_93cms
+ + two_93cms_one_42cm + two_93cms_two_42cms
 Subject To
-Roll_1_Demand: cut_typ_1 + cut_typ_15 + cut_typ_16 + cut_typ_17 + cut_typ_18
- + cut_typ_19 + 2 cut_typ_2 + cut_typ_20 = 97
-Roll_2_Demand: cut_typ_14 + cut_typ_15 + cut_typ_21 + cut_typ_22 + cut_typ_23
- + cut_typ_24 + cut_typ_25 + cut_typ_26 + cut_typ_27 + cut_typ_28
- + 2 cut_typ_29 + cut_typ_3 + 2 cut_typ_30 + 2 cut_typ_4 = 610
-Roll_3_Demand: cut_typ_17 + cut_typ_18 + cut_typ_22 + 2 cut_typ_23
- + cut_typ_24 + cut_typ_25 + cut_typ_32 + cut_typ_33 + cut_typ_34 + cut_typ_35
- + 2 cut_typ_36 + 2 cut_typ_37 + cut_typ_5 + 2 cut_typ_6 + 3 cut_typ_7 = 305
-Roll_4_Demand: 3 cut_typ_10 + 4 cut_typ_11 + 5 cut_typ_12 + 6 cut_typ_13
- + 7 cut_typ_14 + cut_typ_16 + cut_typ_18 + cut_typ_19 + 2 cut_typ_20
- + 3 cut_typ_21 + cut_typ_24 + 2 cut_typ_25 + cut_typ_26 + 2 cut_typ_27
- + 3 cut_typ_28 + 4 cut_typ_29 + cut_typ_30 + 2 cut_typ_31 + cut_typ_32
- + 2 cut_typ_33 + 3 cut_typ_34 + 4 cut_typ_35 + cut_typ_36 + 2 cut_typ_37
- + cut_typ_8 + 2 cut_typ_9 = 211
+Roll_1_Demand: one_135cm + one_135cm_one_108cm + one_135cm_one_108cm_one_42cm
+ + one_135cm_one_42cm + one_135cm_one_93cm + one_135cm_one_93cm_one_42cm
+ + one_135cm_three_42cms + one_135cm_two_42cms + 2 two_135cms = 97
+Roll_2_Demand: one_108cm + one_108cm_four_42cms + one_108cm_one_42cm
+ + one_108cm_one_93cm + one_108cm_one_93cm_one_42cm
+ + one_108cm_one_93cm_two_42cms + one_108cm_three_42cms + one_108cm_two_42cms
+ + one_108cm_two_93cms + one_135cm_one_108cm + one_135cm_one_108cm_one_42cm
+ + seven_42cms + 2 two_108cm + 2 two_108cms_one_42cm + 2 two_108cms_two_42cms
+ = 610
+Roll_3_Demand: one_108cm_one_93cm + one_108cm_one_93cm_one_42cm
+ + one_108cm_one_93cm_two_42cms + 2 one_108cm_two_93cms + one_135cm_one_93cm
+ + one_135cm_one_93cm_one_42cm + one_93cm + one_93cm_four_42_cms
+ + one_93cm_one_42cm + one_93cm_three_42cms + one_93cm_two_42cms
+ + 3 three_93cms + 2 two_93cms + 2 two_93cms_one_42cm + 2 two_93cms_two_42cms
+ = 305
+Roll_4_Demand: 5 five_42cms + 4 four_42cms + 4 one_108cm_four_42cms
+ + one_108cm_one_42cm + one_108cm_one_93cm_one_42cm
+ + 2 one_108cm_one_93cm_two_42cms + 3 one_108cm_three_42cms
+ + 2 one_108cm_two_42cms + one_135cm_one_108cm_one_42cm + one_135cm_one_42cm
+ + one_135cm_one_93cm_one_42cm + 3 one_135cm_three_42cms
+ + 2 one_135cm_two_42cms + one_42cm + 4 one_93cm_four_42_cms
+ + one_93cm_one_42cm + 3 one_93cm_three_42cms + 2 one_93cm_two_42cms
+ + 7 seven_42cms + 6 six_42cms + 3 three_42cms + two_108cms_one_42cm
+ + 2 two_108cms_two_42cms + 2 two_42cms + two_93cms_one_42cm
+ + 2 two_93cms_two_42cms = 211
 Bounds
-0 <= cut_typ_1
-0 <= cut_typ_10
-0 <= cut_typ_11
-0 <= cut_typ_12
-0 <= cut_typ_13
-0 <= cut_typ_14
-0 <= cut_typ_15
-0 <= cut_typ_16
-0 <= cut_typ_17
-0 <= cut_typ_18
-0 <= cut_typ_19
-0 <= cut_typ_2
-0 <= cut_typ_20
-0 <= cut_typ_21
-0 <= cut_typ_22
-0 <= cut_typ_23
-0 <= cut_typ_24
-0 <= cut_typ_25
-0 <= cut_typ_26
-0 <= cut_typ_27
-0 <= cut_typ_28
-0 <= cut_typ_29
-0 <= cut_typ_3
-0 <= cut_typ_30
-0 <= cut_typ_31
-0 <= cut_typ_32
-0 <= cut_typ_33
-0 <= cut_typ_34
-0 <= cut_typ_35
-0 <= cut_typ_36
-0 <= cut_typ_37
-0 <= cut_typ_4
-0 <= cut_typ_5
-0 <= cut_typ_6
-0 <= cut_typ_7
-0 <= cut_typ_8
-0 <= cut_typ_9
+0 <= five_42cms
+0 <= four_42cms
+0 <= one_108cm
+0 <= one_108cm_four_42cms
+0 <= one_108cm_one_42cm
+0 <= one_108cm_one_93cm
+0 <= one_108cm_one_93cm_one_42cm
+0 <= one_108cm_one_93cm_two_42cms
+0 <= one_108cm_three_42cms
+0 <= one_108cm_two_42cms
+0 <= one_108cm_two_93cms
+0 <= one_135cm
+0 <= one_135cm_one_108cm
+0 <= one_135cm_one_108cm_one_42cm
+0 <= one_135cm_one_42cm
+0 <= one_135cm_one_93cm
+0 <= one_135cm_one_93cm_one_42cm
+0 <= one_135cm_three_42cms
+0 <= one_135cm_two_42cms
+0 <= one_42cm
+0 <= one_93cm
+0 <= one_93cm_four_42_cms
+0 <= one_93cm_one_42cm
+0 <= one_93cm_three_42cms
+0 <= one_93cm_two_42cms
+0 <= seven_42cms
+0 <= six_42cms
+0 <= three_42cms
+0 <= three_93cms
+0 <= two_108cm
+0 <= two_108cms_one_42cm
+0 <= two_108cms_two_42cms
+0 <= two_135cms
+0 <= two_42cms
+0 <= two_93cms
+0 <= two_93cms_one_42cm
+0 <= two_93cms_two_42cms
 Generals
-cut_typ_1
-cut_typ_10
-cut_typ_11
-cut_typ_12
-cut_typ_13
-cut_typ_14
-cut_typ_15
-cut_typ_16
-cut_typ_17
-cut_typ_18
-cut_typ_19
-cut_typ_2
-cut_typ_20
-cut_typ_21
-cut_typ_22
-cut_typ_23
-cut_typ_24
-cut_typ_25
-cut_typ_26
-cut_typ_27
-cut_typ_28
-cut_typ_29
-cut_typ_3
-cut_typ_30
-cut_typ_31
-cut_typ_32
-cut_typ_33
-cut_typ_34
-cut_typ_35
-cut_typ_36
-cut_typ_37
-cut_typ_4
-cut_typ_5
-cut_typ_6
-cut_typ_7
-cut_typ_8
-cut_typ_9
+five_42cms
+four_42cms
+one_108cm
+one_108cm_four_42cms
+one_108cm_one_42cm
+one_108cm_one_93cm
+one_108cm_one_93cm_one_42cm
+one_108cm_one_93cm_two_42cms
+one_108cm_three_42cms
+one_108cm_two_42cms
+one_108cm_two_93cms
+one_135cm
+one_135cm_one_108cm
+one_135cm_one_108cm_one_42cm
+one_135cm_one_42cm
+one_135cm_one_93cm
+one_135cm_one_93cm_one_42cm
+one_135cm_three_42cms
+one_135cm_two_42cms
+one_42cm
+one_93cm
+one_93cm_four_42_cms
+one_93cm_one_42cm
+one_93cm_three_42cms
+one_93cm_two_42cms
+seven_42cms
+six_42cms
+three_42cms
+three_93cms
+two_108cm
+two_108cms_one_42cm
+two_108cms_two_42cms
+two_135cms
+two_42cms
+two_93cms
+two_93cms_one_42cm
+two_93cms_two_42cms
 End
