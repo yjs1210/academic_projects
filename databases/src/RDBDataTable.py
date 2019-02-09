@@ -1,5 +1,5 @@
 from BaseDataTable import BaseDataTable
-#from DerivedDataTable import DerivedDataTable
+from DerivedDataTable import DerivedDataTable
 import pandas as pd
 import pymysql
 
@@ -171,26 +171,12 @@ class RDBDataTable(BaseDataTable):
                 key_columns = [i['Column_name'] for i in keys]     
             else: 
                 key_columns = self._key_columns 
-
-            if field_list is None:
-                cols = '*'
-            else:
-                cols = "{}"
             
             if len(key_columns) != len(key_fields):
                 raise KeyError('Wrong Length Keys')
             
-            terms =[]
-            w_clause = ""
-            for k in key_columns:
-                temp_s = k + "=%s "
-                terms.append(temp_s)
-
-            if len(terms) > 0:
-                w_clause = " WHERE " + " AND ".join(terms)
-            # Beginning part of the SQL statement.
-            q = "SELECT "+cols + " FROM " + t_name + w_clause
-            self._run_q(q, args=key_fields, fields=field_list, fetch=True, cnx=None, commit=True)
+            template =  dict(zip(key_columns, key_fields))
+            self.find_by_template(template, field_list=field_list, limit=None, offset=None, order_by=None, commit=True)
 
         except Exception as e:
             print("Got exception = ", e)
@@ -242,9 +228,6 @@ class RDBDataTable(BaseDataTable):
             else:
                 cols = "{}"
             w_clause, args_ = self._template_to_where_clause(template)
-           # key_filter = [str(a) + ' = ' + str(b) for a,b in zip(key_columns, key_fields)]
-#            key_filter = " AND ".join(key_filter)
-            # Beginning part of the SQL statement.
             q = "SELECT "+cols + " FROM " + t_name + " " + w_clause
             self._run_q(q, args=args_, fields=field_list, fetch=True, cnx=None, commit=True)
 
@@ -280,9 +263,6 @@ class RDBDataTable(BaseDataTable):
         try:
             
             w_clause, args_ = self._template_to_where_clause(template)
-           # key_filter = [str(a) + ' = ' + str(b) for a,b in zip(key_columns, key_fields)]
-#            key_filter = " AND ".join(key_filter)
-            # Beginning part of the SQL statement.
             q = "DELETE FROM " + t_name + " " + w_clause
             self._run_q(q, args=args_, fields=None, fetch=False, cnx=None, commit=True)
 
@@ -301,7 +281,9 @@ class RDBDataTable(BaseDataTable):
         :param key_fields: List containing the values for the key columns
         :return: A count of the rows deleted.
         """
-        t_name = self._table_name             
+        t_name = self._table_name  
+        
+                               
         try:
             
             if self._key_columns is None:
@@ -313,17 +295,9 @@ class RDBDataTable(BaseDataTable):
             if len(key_columns) != len(key_fields):
                 raise KeyError('Wrong Length Keys')
             
-            terms =[]
-            w_clause = ""
-            for k in key_columns:
-                temp_s = k + "=%s "
-                terms.append(temp_s)
-
-            if len(terms) > 0:
-                w_clause = " WHERE " + " AND ".join(terms)
             # Beginning part of the SQL statement.
-            q = "DELETE FROM " + t_name + w_clause
-            self._run_q(q, args=key_fields, fields=None, fetch=False, cnx=None, commit=True)
+            template =  dict(zip(key_columns, key_fields))
+            self.delete_by_template(template)
 
         except Exception as e:
             print("Got exception = ", e)
@@ -388,7 +362,8 @@ class RDBDataTable(BaseDataTable):
             update on this error.
         :return: The number of rows updates.
         """
-        t_name = self._table_name             
+        t_name = self._table_name   
+   
         try:
             
             if self._key_columns is None:
@@ -399,24 +374,10 @@ class RDBDataTable(BaseDataTable):
             
             if len(key_columns) != len(key_fields):
                 raise KeyError('Wrong Length Keys')
-            
-            terms =[]
-            w_clause = ""
-            for k in key_columns:
-                temp_s = k + "=%s "
-                terms.append(temp_s)
-            
-                        
-            if len(terms) > 0:
-                w_clause = " WHERE " + " AND ".join(terms)
-                
-            u_clause, args_u = self._template_to_update_clause(new_values)
-            
-            args_ = args_u + key_fields
-            
+
             # Beginning part of the SQL statement.
-            q = "UPDATE " + t_name + " " + u_clause +" "+ w_clause
-            self._run_q(q, args=args_, fields=None, fetch=False, cnx=None, commit=True)
+            template =  dict(zip(key_columns, key_fields))
+            self.update_by_template(template, new_values)       
 
         except Exception as e:
             print("Got exception = ", e)
