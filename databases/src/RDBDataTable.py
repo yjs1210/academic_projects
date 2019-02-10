@@ -12,12 +12,12 @@ class RDBDataTable(BaseDataTable):
     # Default connection information in case the code does not pass an object
     # specific connection on object creation.
     _default_connect_info = {
-        'host': 'localhost',
-        'user': 'dbuser',
-        'password': 'dbuser',
-        'db': 'lahman2017',
-        'port': 3306
-    }
+            'host': 'localhost',
+            'user': 'intro-db',
+            'password': 'introdb12',
+            'db': 'demographics',
+            'port': 3306
+               }
 
     def debug_message(self, *m):
         """
@@ -27,6 +27,41 @@ class RDBDataTable(BaseDataTable):
         """
         if self._debug:
             print(" *** DEBUG:", *m)
+    
+    def _get_keys(self):
+        t_name = self._table_name
+        actual_keys = self._run_q("SHOW KEYS FROM " + t_name + " WHERE Key_name = 'PRIMARY'")
+        actual_key_columns = [i['Column_name'] for i in actual_keys]
+        return actual_key_columns
+
+    def _check_connection(self):
+        out = self._run_q("Select 'something'")
+        if out != [{'something': 'something'}]:
+            raise ValueError('Invalid Connection String')
+        
+        
+    def _check_keys(self, keys=None):
+        ###check if the keys inputted by user is valid
+        if keys is None:
+            key_check = self._key_columns
+        else:
+            key_check = keys
+        actual_key_columns = self._get_keys()
+        if (actual_key_columns!=key_check):
+            raise ValueError("You entered the wrong keys please try "+ ', '.join(str(p) for p in actual_key_columns)) 
+    
+    def _get_fields(self):
+        t_name = self._table_name
+        actual = self._run_q("DESCRIBE " + t_name)
+        out = [i['Field'] for i in actual]
+        return out
+    
+    def _check_fields(self,fields):
+        actual_fields = self._get_fields()
+        for i in fields:
+            if (not i in actual_fields):
+                raise ValueError("Field "+ i+ " does not exist")
+        
 
     def __init__(self, table_name, key_columns, connect_info=None, debug=False):
         """
@@ -38,6 +73,7 @@ class RDBDataTable(BaseDataTable):
 
         # Initialize and store information in the parent class.
         super().__init__(table_name, connect_info, key_columns, debug)
+        
 
         # If there is not explicit connect information, use the defaults.
         if connect_info is None:
@@ -52,7 +88,10 @@ class RDBDataTable(BaseDataTable):
             db=self._connect_info['db'],
             charset='utf8mb4',
             cursorclass=pymysql.cursors.DictCursor)
-
+        
+        self._check_connection()
+        self._check_keys(key_columns)
+        
     def __str__(self):
         """
 
@@ -101,20 +140,20 @@ class RDBDataTable(BaseDataTable):
 
         # If debugging is turned on, will print the query sent to the database.
         self.debug_message("Query = ", cursor.mogrify(q, args))
-        print(q)
-        cursor.execute(q, args)  # Execute the query.
+        
+        num = cursor.execute(q, args)  # Execute the query.
 
         # Technically, INSERT, UPDATE and DELETE do not return results.
         # Sometimes the connector libraries return the number of created/deleted rows.
         if fetch:
             r = cursor.fetchall()  # Return all elements of the result.
         else:
-            r = None
+            r = num
 
         if commit:                  # Do not worry about this for now.
             cnx.commit()
         
-        print(r)
+        
         
         return r
 
@@ -161,22 +200,14 @@ class RDBDataTable(BaseDataTable):
             by the key.
         """
         # Your implementation goes here.
-        # Name of table.
-        t_name = self._table_name             
-                               
         try:
-            
-            if self._key_columns is None:
-                keys = self._run_q("SHOW KEYS FROM " + t_name + " WHERE Key_name = 'PRIMARY'")
-                key_columns = [i['Column_name'] for i in keys]     
-            else: 
-                key_columns = self._key_columns 
-            
+            self._check_keys()
+            key_columns = self._get_keys()
             if len(key_columns) != len(key_fields):
-                raise KeyError('Wrong Length Keys')
+                raise ValueError('Wrong Length Keys')
             
             template =  dict(zip(key_columns, key_fields))
-            self.find_by_template(template, field_list=field_list, limit=None, offset=None, order_by=None, commit=True)
+            return self.find_by_template(template, field_list=field_list, limit=None, offset=None, order_by=None, commit=True)
 
         except Exception as e:
             print("Got exception = ", e)
@@ -219,17 +250,23 @@ class RDBDataTable(BaseDataTable):
         :return: A list containing dictionaries. A dictionary is in the list representing each record
             that matches the template. The dictionary only contains the requested fields.
         """
-        t_name = self._table_name             
-                               
+        t_name = self._table_name                       
         try:
             
             if field_list is None:
                 cols = '*'
             else:
+                self._check_fields(field_list)
                 cols = "{}"
             w_clause, args_ = self._template_to_where_clause(template)
             q = "SELECT "+cols + " FROM " + t_name + " " + w_clause
-            self._run_q(q, args=args_, fields=field_list, fetch=True, cnx=None, commit=True)
+            out = self._run_q(q, args=args_, fields=field_list, fetch=True, cnx=None, commit=True)
+            
+            if len(out)==0:
+                return None
+            
+            
+            return DerivedDataTable(t_name,out)
 
         except Exception as e:
             print("Got exception = ", e)
@@ -297,7 +334,7 @@ class RDBDataTable(BaseDataTable):
             
             # Beginning part of the SQL statement.
             template =  dict(zip(key_columns, key_fields))
-            self.delete_by_template(template)
+            return self.delete_by_template(template)
 
         except Exception as e:
             print("Got exception = ", e)
@@ -346,7 +383,7 @@ class RDBDataTable(BaseDataTable):
             u_clause, args_u = self._template_to_update_clause(new_values)
             args_ = args_u+args_w
             q = "UPDATE " + t_name + " " + u_clause +" "+ w_clause
-            self._run_q(q, args= args_, fields=None, fetch=False, cnx=None, commit=True)
+            return self._run_q(q, args= args_, fields=None, fetch=False, cnx=None, commit=True)
 
         except Exception as e:
             print("Got exception = ", e)

@@ -5,13 +5,14 @@ import pymysql
 
 cnx = {
     'host': 'localhost',
-    'user': 'yjs1210',
-    'password': '@Wjdtjr12',
+    'user': 'intro-db',
+    'password': 'introdb12',
     'db': 'demographics',
     'port': 3306
 }
 
 x = RDBDataTable('demographics.stats_by_zip',['zipcode','cnt_participants'],cnx)
+#out = x.find_by_primary_key([10003,1], field_list= ['cnt_participants','cnt_female'])
 
-
-x.update_by_key( [10002,35] ,{'zipcode':10003 ,'cnt_participants':1})
+#x.find_by_template({'zipcode':10003,'cnt_participants':1})
+#out = x.find_by_primary_key([-10000,1], field_list= ['cnt_participants','cnt_female'])

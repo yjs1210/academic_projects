@@ -42,4 +42,44 @@ resid <- augment(fit)
 ggplot(resid, aes(x=.fitted, y=.resid)) + geom_point() 
 
 ##9. 
+###CI assuming normal
+width = sqrt(SSr/((n-2)*Sxx))*qt(0.025,nrow(df)-2,lower.tail = FALSE)
+B - width
+B + width
 
+###Not assuming normal??
+
+###10.
+out <- c()
+for (i in 1:1000){
+  sam <-df[sample(nrow(df),replace=TRUE),]
+  Sxx_sam <- sum((sam$age - mean(sam$age))^2)
+  Sxy_sam <- sum((sam$age - mean(sam$age))*(sam$tot - mean(sam$tot)))
+  B_sam <- Sxy_sam/Sxx_sam
+  out = c(out,B_sam)
+}
+quantile(out,c(.025,.975))
+
+###pretty close but it seems the tails are fatter than what the distribution models. Width of the interva lis wider with bootstrap
+
+11. 
+
+calc_corr <- function (df){
+  cov = sum((df$age - mean(df$age))*(df$tot - mean(df$tot)))/(nrow(df)-1)
+  correlation = cov/sd(df$age)/sd(df$tot)
+  return(correlation) 
+}
+
+bench <- calc_corr(df)
+
+out_corr<- c()
+for (i in 1:nrow(df)){
+  df_temp <- df[-i,]
+  out_corr <- c(out_corr,calc_corr(df_temp))
+}
+
+diff <- out_corr - bench
+idx<-which.max(abs(diff))
+diff[157]
+diff[57]
+df[idx,]
