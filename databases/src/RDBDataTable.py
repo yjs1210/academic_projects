@@ -40,7 +40,7 @@ class RDBDataTable(BaseDataTable):
             raise ValueError('Invalid Connection String')
         
         
-    def _check_keys(self, keys=None):
+    def _check_keys_init(self, keys=None):
         ###check if the keys inputted by user is valid
         if keys is None:
             key_check = self._key_columns
@@ -49,6 +49,19 @@ class RDBDataTable(BaseDataTable):
         actual_key_columns = self._get_keys()
         if (actual_key_columns!=key_check):
             raise ValueError("You entered the wrong keys please try "+ ', '.join(str(p) for p in actual_key_columns)) 
+            
+    def _check_keys_query(self, keys=None):
+        ###check if the keys inputted by user is valid
+        actual_keys =  self._key_columns
+        if keys is None:
+            if not actual_keys is None:
+                raise ValueError("You entered the wrong keys please try "+ ', '.join(str(p) for p in actual_keys)) 
+        else: 
+            if actual_keys is None:
+                raise ValueError("Key column not initiated, you can't query by the keys")
+            else:
+                if len(actual_keys) != len(keys):
+                    raise ValueError("You entered wrong length keys, please try "+ ', '.join(str(p) for p in actual_keys)) 
     
     def _get_fields(self):
         t_name = self._table_name
@@ -63,7 +76,7 @@ class RDBDataTable(BaseDataTable):
                 raise ValueError("Field "+ i+ " does not exist")
         
 
-    def __init__(self, table_name, key_columns, connect_info=None, debug=False):
+    def __init__(self, table_name, key_columns, connect_info=None, debug=True):
         """
 
         :param table_name: The name of the RDB table.
@@ -90,7 +103,8 @@ class RDBDataTable(BaseDataTable):
             cursorclass=pymysql.cursors.DictCursor)
         
         self._check_connection()
-        self._check_keys(key_columns)
+        self._check_keys_init(key_columns)
+        self.debug = debug
         
     def __str__(self):
         """
@@ -201,11 +215,8 @@ class RDBDataTable(BaseDataTable):
         """
         # Your implementation goes here.
         try:
-            self._check_keys()
-            key_columns = self._get_keys()
-            if len(key_columns) != len(key_fields):
-                raise ValueError('Wrong Length Keys')
-            
+            self._check_keys_query(key_fields)
+            key_columns = self._get_keys()            
             template =  dict(zip(key_columns, key_fields))
             return self.find_by_template(template, field_list=field_list, limit=None, offset=None, order_by=None, commit=True)
 

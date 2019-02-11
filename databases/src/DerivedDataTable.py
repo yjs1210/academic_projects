@@ -1,21 +1,25 @@
 # Your implementation goes in this file.
-from BaseDataTable import BaseDataTable
+from CSVDataTable import CSVDataTable
 
-class DerivedDataTable(BaseDataTable):
-                
+class DerivedDataTable(CSVDataTable):
     def __init__(self, table_name, rows):
         """
 
-        :param table_name: The name of the RDB table.
-        :param connect_info: Dictionary of parameters necessary to connect to the data.
+        :param table_name: Name of the table. This is the table name for an RDB table or the file name for
+            a CSV file holding data.
+        :param connect_info: Dictionary of parameters necessary to connect to the data. See examples in subclasses.
         :param key_columns: List, in order, of the columns (fields) that comprise the primary key.
+            A primary key is a set of columns whose values are unique and uniquely identify a row. For Appearances,
+            the columns are ['playerID', 'teamID', 'yearID']
+        :param debug: If true, print debug messages.
         """
-        # Initialize and store information in the parent class.
-        self._table_name = table_name
-        self._rows = rows
+        self._connect_info = None
+        self._column_names = None
         self._key_columns = None
-        self._debug = None
- 
+
+        super().__init__(table_name, None, None)
+        self._rows = rows
+
     def find_by_primary_key(self, key_fields, field_list=None):
         """
 
@@ -25,51 +29,20 @@ class DerivedDataTable(BaseDataTable):
             additional columns, but the caller only requests this subset.
         :return: None, or a dictionary containing the columns/values for the row.
         """
-        pass
+        raise NotImplementedError()
 
-    def find_by_template(self, template, field_list=None, limit=None, offset=None, order_by=None, commit=True):
+    def find_by_template(self, template, field_list=None, limit=None, offset=None, order_by=None):
         """
 
-        :param template: A dictionary of the form { "field1" : value1, "field2": value2, ...}
-        :param field_list: A list of request fields of the form, ['fielda', 'fieldb', ...]
+        :param template: A dictionary of the form { "field1" : value1, "field2": value2, ...}. The function will return
+            a derived table containing the rows that match the template.
+        :param field_list: A list of requested fields of the form, ['fielda', 'fieldb', ...]
         :param limit: Do not worry about this for now.
         :param offset: Do not worry about this for now.
         :param order_by: Do not worry about this for now.
-        :return: A list containing dictionaries. A dictionary is in the list representing each record
-            that matches the template. The dictionary only contains the requested fields.
+        :return: A derived table containing the computed rows.
         """
-        try:
-            t_name = self._table_name   
-            data = self._rows
-            
-            if data is None:
-                return None
-            
-            if(len(data)==0):
-                return None
-            
-            if(not all(key in data[0].keys() for key in template.keys())):
-                raise KeyError('Specified columns in field_list are not found in the original data')
-                
-            out_data = []
-            for row in iter(data):
-                for key,val in template.items():
-                    if(row[key] != val):
-                        continue
-                    if field_list is None:
-                        out_data.append(row)
-                    else:
-                        row_out = dict((k, row[k]) for k in field_list.keys())
-                        out_data.append(row_out)
-            if len(row_out) ==0:
-                return None
-            
-            return DerivedDataTable(t_name,out_data)
-        
-        except Exception as e:
-            print("Got exception = ", e)
-            raise e  
-                
+        return super().find_by_template(self, template, field_list, limit, offset, order_by)
 
     def insert(self, new_record):
         """
@@ -78,7 +51,7 @@ class DerivedDataTable(BaseDataTable):
             creates a duplicate primary key.
         :return: None
         """
-        pass
+        raise NotImplementedError()
 
     def delete_by_template(self, template):
         """
@@ -88,7 +61,7 @@ class DerivedDataTable(BaseDataTable):
         :param template: A template.
         :return: A count of the rows deleted.
         """
-        pass
+        raise NotImplementedError()
 
     def delete_by_key(self, key_fields):
         """
@@ -98,7 +71,7 @@ class DerivedDataTable(BaseDataTable):
         :param key_fields: List containing the values for the key columns
         :return: A count of the rows deleted.
         """
-        pass
+        raise NotImplementedError()
 
     def update_by_template(self, template, new_values):
         """
@@ -109,7 +82,7 @@ class DerivedDataTable(BaseDataTable):
             update on this error.
         :return: The number of rows updates.
         """
-        pass
+        raise NotImplementedError()
 
     def update_by_key(self, key_fields, new_values):
         """
@@ -120,4 +93,7 @@ class DerivedDataTable(BaseDataTable):
             update on this error.
         :return: The number of rows updates.
         """
-        pass
+        raise NotImplementedError()
+    
+    def get_rows(self):
+        return self._rows

@@ -5,11 +5,7 @@ Created on Sat Feb  9 14:10:10 2019
 @author: James
 """
 
-import numpy as np
 import csv as csv
-from collections import OrderedDict as od
-from operator import itemgetter
-from itertools import groupby
 
 class TenGreatestHitters():
     
@@ -107,71 +103,16 @@ class TenGreatestHitters():
             i[1]['first_name'] = people_dict[i[0]]['nameFirst']
             i[1]['last_name'] = people_dict[i[0]]['nameLast']
         return data
-        
-'''
-d = collections.OrderedDict()
-
-for i in range(0,len(indata)):
-    if int(indata[i]['yearID']) >= 1960:
-        d[i] = indata[i]
-len(d)
-
-from collections import defaultdict, Counter
-
-#dic = defaultdict(Counter)
-new_dic = {}
-for i in d:
-    #print(i) index
-    key = d[i]['playerID']
-    if key != 'dff1':
-        if key not in new_dic: #add player id to new dic
-            new_dic[key] = {}
-        for k,v in d[i].items(): 
-            if k == 'AB':
-                if 'total_AB' not in new_dic[key]:
-                    new_dic[key]['total_AB'] = float(v)
-                else:
-                    new_dic[key]['total_AB'] += float(v)
-            if k == 'H':
-                if 'total_H' not in new_dic[key]:
-                    new_dic[key]['total_H'] = float(v)
-                else:
-                    new_dic[key]['total_H'] += float(v)
-                    
-                    
-subset_dic = {}
-for i in new_dic:
-    if new_dic[i]['total_AB'] >= 200:
-        subset_dic[i] = new_dic[i]
-        
-        
-for i in subset_dic:
-    if subset_dic[i]['total_AB'] == 0:
-        subset_dic[i]['Batting_Average'] = 0
-    else:
-        subset_dic[i]['Batting_Average'] = subset_dic[i]['total_H'] / subset_dic[i]['total_AB']
-        
-sorted_dic = sorted(subset_dic.items(), key = lambda x: x[1]['Batting_Average'], reverse=True)
-
-input_file = csv.DictReader(open("people.csv"))
-people = list(input_file)
-people[0]
-
-
-for i in range(0,len(people)):
-    key = people[i]['playerID']
-    if key in s.keys():
-        s[key]['nameFirst'] = people[i]['nameFirst']
-        s[key]['nameLast'] = people[i]['nameLast']     
-        
-# Top Ten
-final_dict = {}
-count = 0
-for i in s:
-    if len(final_dict) != 10:
-        final_dict[i] = s[i]
-        count += 1
-
-# final_d = {}
-# for i in 
-#     final_d.append(s[i])'''
+    
+if __name__ == '__main__':
+    x = TenGreatestHitters()
+    out2 = x.compute_aggs_and_year_by_id(['AB','H'])
+    out3 = x.compute_batting_avg(out2)
+    out4 = x.filter_AB_by_at_least_value(out3,200,1960)
+    out5 = x.sort_by_field(out4,'batting_avg')
+    out6 = x.join_people(out5)
+    for idx,i in enumerate(out6):
+        print('{} {} {}'.format(i[0], i[1]['batting_avg'],i[1]['first_name']))
+        if idx ==9:
+            break
+    

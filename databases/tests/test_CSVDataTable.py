@@ -1,16 +1,16 @@
 from CSVDataTable import CSVDataTable
 
 connect_info = {
-    'directory': '/Users/yimin/Desktop/Columbia/Spring 2019/Databases/w4111-Databases/HW_Assignments/HW1/Data/',
-    'file_name': 'offices.csv'
+    'directory': '../data/',
+    'file_name': 'demographics_by_zip.csv'
 }
 
-offices = CSVDataTable('Offices', key_columns=['officeCode'], connect_info=connect_info)
-
+offices = CSVDataTable('Offices', key_columns=['zipcode'], connect_info=connect_info)
+#%%
 print(offices)
 
 offices.load()
-
+#%%
 print(offices)
 
 print(offices._rows[0])
@@ -18,22 +18,21 @@ print(offices._rows[0])
 print('field names: ', offices._field_names)
 
 template = {
-    'officeCode': '1',
-    'city': 'San Francisco'
+    'zipcode': '10004'
 }
 
 template1 = {
-    'country': 'USA',
+    'zipcode': '10004'
 }
 
-field_list = ['officeCode', 'city']
+#field_list = ['officeCode', 'city']
 
-bool = offices._matches_template(template, offices._rows[0])
+#bool = offices._matches_template(template, offices._rows[0])
 
-print(bool)
+#print(bool)
 
-res = offices.find_by_template(template1, field_list)._rows
-
+res = offices.find_by_template(template1)._rows
+#%%
 print(res, '\n')
 
 res = offices.find_by_primary_key(['1'])
