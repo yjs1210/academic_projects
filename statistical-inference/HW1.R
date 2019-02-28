@@ -89,49 +89,50 @@ df[idx,]
 
 ##### QUestions 3.
 df_merton = data.frame(x=c(2,3,4,5,6,7,8,9),frequency=c(179,51,17,6,8,1,0,2))
-u = c(seq(.1,3,by=.1))
-log(u)
-
-likelihood = c()
-for (i in 1:length(u)){
-  mu = u[i]
-  klogmu = sum(log(mu)*df_merton$x*df_merton$frequency)
-  summ = sum(factorial(df_merton$x)*df_merton$frequency)
-  n= sum(df_merton$frequency)
-  constant1 = n*mu
-  constant2 = n*(1-exp(-mu)-mu*exp(-mu))
-  fin = klogmu - constant1 - constant2 - summ 
-  likelihood = c(likelihood,fin)
-}
-
-df_plot = data.frame(mu=u,likelihood=likelihood)
-ggplot(data=df_plot, aes(x=mu, y=likelihood)) + geom_line() 
-
-
-##6
-df_merton = data.frame(x=c(2,3,4,5,6,7,8,9),frequency=c(179,51,17,6,8,1,0,2))
 u = c(seq(.1,3,by=.001))
 log(u)
 
 likelihood = c()
 for (i in 1:length(u)){
   mu = u[i]
-  klogmu = sum(log(mu)*df_merton$x*df_merton$frequency)
-  summ = sum(factorial(df_merton$x)*df_merton$frequency)
+  klogmu = sum(df_merton$x*df_merton$frequency)*log(mu)
+  summ = -sum(log(factorial(df_merton$x))*df_merton$frequency)
   n= sum(df_merton$frequency)
-  constant1 = n*mu
-  constant2 = n*(1-exp(-mu)-mu*exp(-mu))
-  fin = klogmu - constant1 - constant2 - summ 
+  constant1 = -n*mu
+  constant2 = -n*log(1-exp(-mu)-mu*exp(-mu))
+  fin = klogmu + constant1 +constant2 + summ 
   likelihood = c(likelihood,fin)
 }
 
 df_plot = data.frame(mu=u,likelihood=likelihood)
 ggplot(data=df_plot, aes(x=mu, y=likelihood)) + geom_line() 
-
 u_mle = u[which.max(likelihood)]
+u_mle
 
+##6
+df_merton = data.frame(x=c(2,3,4,5,6,7,8,9),frequency=c(179,51,17,6,8,1,0,2))
+u = c(seq(.1,3,by=.001))
 
-var_mle = 1/(n + u_mle*2*n*exp(-u_mle) - u_mle^2*n*exp(-u_mle))
+likelihood = c()
+for (i in 1:length(u)){
+  mu = u[i]
+  klogmu = sum(df_merton$x*df_merton$frequency)/mu
+  n= sum(df_merton$frequency)
+  constant1 = -n
+  constant2 = -n*(mu*exp(-mu))/(1-exp(-mu)-mu*exp(-mu))
+  fin = klogmu + constant1 + constant2 
+  likelihood = c(likelihood,fin)
+}
+
+df_plot = data.frame(mu=u,likelihood=likelihood)
+ggplot(data=df_plot, aes(x=mu, y=likelihood)) + geom_line() 
+u_mle = u[which.min(abs(likelihood -0))]
+u_mle = 1.398
+
+var_mle =  1/((n*u_mle^2*exp(-2*u_mle))/(1-exp(-u_mle)-u_mle*exp(-u_mle))^2+
+                (n*u_mle*exp(-u_mle)-exp(-u_mle)) /(1-exp(-u_mle)-u_mle*exp(-u_mle)) -
+                    sum(df_merton$frequency)/u_mle^2)
+              
 
 ##3.8 CI
 u_mle - 1.96/sqrt(n)*sqrt(var_mle)
@@ -140,3 +141,44 @@ u_mle + 1.96/sqrt(n)*sqrt(var_mle)
 
 #3.9 
 Ey= u_mle*(1-exp(-u_mle)) / (1-exp(-u_mle)-u_mle*exp(-u_mle))
+
+
+
+
+###5.3
+sample1
+
+out1=c()
+out2=c()
+
+for (i in 1:100){
+sample1=rpois(50,5)
+mu = rgamma(1,shape =5/2, scale = 2)
+sample2 =rpois(50,mu)
+out1 = c(out1,sample1)
+out2 = c(out2,sample2)
+}
+
+bootstrap
+mu_out1 = c()
+mu_out2 = c()
+var_out1 = c()
+var_out2 = c()
+for (i in 1:1000){
+  sam1 <-out1[sample(length(out1),replace=TRUE)]
+  sam2 <-out2[sample(length(out2),replace=TRUE)]
+  mu1 = mean(sam1)
+  mu2 = mean(sam2)
+  var1 = var(sam1)
+  var2 = var(sam2)
+  mu_out1 = c(mu_out1,mu1)
+  mu_out2 = c(mu_out2,mu2)
+  var_out1 = c(var_out1,var1)
+  var_out2 = c(var_out2,var2)
+}
+
+quantile(out,c(.025,.975))
+
+
+5.4
+
