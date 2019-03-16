@@ -1,0 +1,16 @@
+test_delete_by_key_works (__main__.TestStringMethods) ... ok
+test_delete_by_template_works (__main__.TestStringMethods) ... ok
+test_find_by_keys_works (__main__.TestStringMethods) ... ok
+test_find_by_template_works (__main__.TestStringMethods) ... ok
+test_invalid_field_name (__main__.TestStringMethods) ... ok
+test_none_returned_on_no_result_query (__main__.TestStringMethods) ... ok
+test_not_implemented_error (__main__.TestStringMethods) ... ok
+test_update_by_key_works (__main__.TestStringMethods) ... ok
+test_update_by_template_works (__main__.TestStringMethods) ... ok
+test_wrong_keys_in_init_raises_error (__main__.TestStringMethods) ... ok
+test_wrong_keys_in_query_raises_error (__main__.TestStringMethods) ... ok
+
+----------------------------------------------------------------------
+Ran 11 tests in 1.610s
+
+OK
