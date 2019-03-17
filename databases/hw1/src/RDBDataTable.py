@@ -261,27 +261,41 @@ class RDBDataTable(BaseDataTable):
         :return: A list containing dictionaries. A dictionary is in the list representing each record
             that matches the template. The dictionary only contains the requested fields.
         """
-        t_name = self._table_name                       
+        result = None
+
         try:
-            
+            # Compute the where clause.
+            w_clause = self._template_to_where_clause(template)
+
             if field_list is None:
-                cols = '*'
+                # If there is not field list, we are doing 'select *'
+                f_select = ['*']
             else:
-                self._check_fields(field_list)
-                cols = "{}"
-            w_clause, args_ = self._template_to_where_clause(template)
-            q = "SELECT "+cols + " FROM " + t_name + " " + w_clause
-            out = self._run_q(q, args=args_, fields=field_list, fetch=True, cnx=None, commit=True)
-            
-            if len(out)==0:
-                return None
-            
-            
-            return DerivedDataTable(t_name,out)
+                f_select = field_list
+
+           # ext = self._get_extra(limit,offset,order_by)
+            # Query template.
+            # _run_q will use args for %s terms and will format the field selection into {}
+            q = "select {} from " + self._table_name + " " + w_clause[0] 
+            #" " + ext
+
+            if order_by:
+                q += " order by " + str(order_by)
+            if limit:
+                q += " limit " + str(limit)
+            if offset:
+                q += " offset " + str(offset)
+
+            result = self._run_q(q, args=w_clause[1], fields=f_select, fetch=True, commit=commit)            
+
+            # SELECT queries always produce tables.
+            result = DerivedDataTable("SELECT(" + self._table_name + ")", result)
 
         except Exception as e:
-            print("Got exception = ", e)
+            print("Exception e = ", e)
             raise e
+
+        return result
 
 
     def insert(self, new_record):
@@ -312,14 +326,14 @@ class RDBDataTable(BaseDataTable):
             
             w_clause, args_ = self._template_to_where_clause(template)
             q = "DELETE FROM " + t_name + " " + w_clause
-            self._run_q(q, args=args_, fields=None, fetch=False, cnx=None, commit=True)
+            nums = self._run_q(q, args=args_, fields=None, fetch=False, cnx=None, commit=True)
 
         except Exception as e:
             print("Got exception = ", e)
             raise e
         
         
-        pass
+        return nums
 
     def delete_by_key(self, key_fields):
         """
