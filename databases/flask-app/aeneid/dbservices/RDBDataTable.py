@@ -1,5 +1,7 @@
+##James Lee - jl5241
 from aeneid.dbservices.BaseDataTable import BaseDataTable
 from aeneid.dbservices.DerivedDataTable import DerivedDataTable
+import aeneid.dbservices.dataservice as ds
 import pandas as pd
 
 import pymysql
@@ -47,12 +49,12 @@ class RDBDataTable(BaseDataTable):
     def _check_keys_init(self, keys=None):
         ###check if the keys inputted by user is valid
         if keys is None:
-            key_check = self._key_columns
+            self._key_columns = self._get_keys()
         else:
             key_check = keys
-        actual_key_columns = self._get_keys()
-        if (actual_key_columns!=key_check):
-            raise ValueError("You entered the wrong keys please try "+ ', '.join(str(p) for p in actual_key_columns)) 
+            actual_key_columns = self._get_keys()
+            if (actual_key_columns!=key_check):
+                raise ValueError("You entered the wrong keys please try "+ ', '.join(str(p) for p in actual_key_columns)) 
             
     def _check_keys_query(self, keys=None):
         ###check if the keys inputted by user is valid
@@ -80,7 +82,7 @@ class RDBDataTable(BaseDataTable):
                 raise ValueError("Field "+ i+ " does not exist")
         
 
-    def __init__(self, table_name, key_columns, connect_info=None, debug=True):
+    def __init__(self, table_name, key_columns =None, connect_info=None, debug=True):
         """
 
         :param table_name: The name of the RDB table.
@@ -134,7 +136,7 @@ class RDBDataTable(BaseDataTable):
 
         return result
 
-    def _run_q(self, q, args=None, fields=None, fetch=True, cnx=None, commit=True):
+    def _run_q(self, q, args=None, fields=None, fetch=True, cnx=None, commit=True,get_row_id = False):
         """
 
         :param q: An SQL query string that may have %s slots for argument insertion. The string
@@ -145,35 +147,48 @@ class RDBDataTable(BaseDataTable):
         :param commit: Do not worry about this for now. This is more wizard stuff.
         :return: A result set or None.
         """
+        try: 
+            row_id = None
 
-        # Use the connection in the object if no connection provided.
-        if cnx is None:
-            cnx = self._cnx
+            # Use the connection in the object if no connection provided.
+            if cnx is None:
+                cnx = self._cnx
 
-        # Convert the list of columns into the form "col1, col2, ..." for following SELECT.
-        if fields:
-            q = q.format(",".join(fields))
+            # Convert the list of columns into the form "col1, col2, ..." for following SELECT.
+            if fields:
+                q = q.format(",".join(fields))
 
-        cursor = cnx.cursor()  # Just ignore this for now.
+            cursor = cnx.cursor()  # Just ignore this for now.
 
-        # If debugging is turned on, will print the query sent to the database.
-        self.debug_message("Query = ", cursor.mogrify(q, args))
-        
-        num = cursor.execute(q, args)  # Execute the query.
+            # If debugging is turned on, will print the query sent to the database.
+            self.debug_message("Query = ", cursor.mogrify(q, args))
+            
+            num = cursor.execute(q, args)  # Execute the query.
 
-        # Technically, INSERT, UPDATE and DELETE do not return results.
-        # Sometimes the connector libraries return the number of created/deleted rows.
-        if fetch:
-            r = cursor.fetchall()  # Return all elements of the result.
-        else:
-            r = num
+            if get_row_id:
+                row_id = cursor.lastrowid
+            
+            if row_id ==0:
+                row_id = None 
 
-        if commit:                  # Do not worry about this for now.
-            cnx.commit()
-        
-        
-        
-        return r
+            # Technically, INSERT, UPDATE and DELETE do not return results.
+            # Sometimes the connector libraries return the number of created/deleted rows.
+            if fetch:
+                r = cursor.fetchall()  # Return all elements of the result.
+            else:
+                r = num
+
+            if commit:                  # Do not worry about this for now.
+                cnx.commit()
+ 
+            if get_row_id:
+                return r, row_id
+            else: 
+                return r
+
+        except Exception as e:
+            print("Got exception = ", e)
+            raise e
 
     def _run_insert(self, table_name, column_list, values_list, cnx=None, commit=True):
         """
@@ -203,7 +218,7 @@ class RDBDataTable(BaseDataTable):
             # Put all together.
             q += values
             
-            return self._run_q(q, args=values_list, fields=None, fetch=False, cnx=cnx, commit=commit)
+            return self._run_q(q, args=values_list, fields=None, fetch=False, cnx=cnx, commit=commit,get_row_id = True)
 
         except Exception as e:
             print("Got exception = ", e)
@@ -254,7 +269,17 @@ class RDBDataTable(BaseDataTable):
 
         return w_clause, args
 
-    def find_by_template(self, template, field_list=None, limit=None, offset=None, order_by=None, commit=True):
+    def _get_schema_table(self, table):
+        schema_table = table.split('.')
+        if len(schema_table) ==1:
+            schema = self._connect_info['db']
+            table = schema_table[0]
+        else:
+            schema = schema_table[0]
+            table = schema_table[1] 
+        return schema, table
+
+    def find_by_template(self, template, field_list=None, limit=None, offset=None, order_by=None, commit=True,children = None,helper=False):
         """
 
         :param template: A dictionary of the form { "field1" : value1, "field2": value2, ...}
@@ -280,15 +305,50 @@ class RDBDataTable(BaseDataTable):
            # ext = self._get_extra(limit,offset,order_by)
             # Query template.
             # _run_q will use args for %s terms and will format the field selection into {}
-            q = "select {} from " + self._table_name + " " + w_clause[0] 
+            if children:
+                schema1, table1= self._get_schema_table(self._table_name)
+                schema2, table2 = self._get_schema_table(children)
+                schema_table1 = schema1+'.'+table1
+                schema_table2 = schema2+'.'+table2
+                q = "Select {} from " + schema_table1 +" JOIN " + schema_table2 + " " + w_clause[0]
+                
+                
+                foreign_key = ds.get_foreign_key(schema_table1,schema_table2)
+                for k,v in foreign_key.items():
+                    map = v['MAP'][0]
+                    check_in_field = map['REFERENCED_COLUMN_NAME']
+                    if table1+"."+check_in_field not in field_list:
+                        field_list.append(table_name.split('.') + '.'+check_in_field)
+                    q +=  " AND " + schema_table1 + "." + map['REFERENCED_COLUMN_NAME'] + " = " + schema_table2 + "."+ map['COLUMN_NAME']
+                
+                '''
+                childrens = children.split(',')
+                for idx,child in enumerate(childrens):
+                    schema2, table 2= dt._get_schema_table(child)
+                        
+                    schema_table2 = schema2+ "." + table2
+                    q += " LEFT JOIN " + schema_table2 + " as "+schema_table2+ " ON " 
+
+                    foreign_keys = self.get_join_column_mapping(schema1,table1,schema2,table2)
+                    for idx,(key,val) in enumerate(foreign_keys.items()):
+                        mapping = val['MAP'][0]
+                        if idx == 0:
+                            q+= schema_table1 + "." + mapping['REFERENCED_COLUMN_NAME'] + '=' + schema_table2 + "." + mapping['COLUMN_NAME']
+                        else: 
+                            q+= " and " + schema_table1 + "." + mapping['REFERENCED_COLUMN_NAME'] + '=' + schema_table2 + "." + mapping['COLUMN_NAME']
+                     '''
+
+            else:
+                q = "select {} from " + self._table_name + " " + w_clause[0] 
             #" " + ext
 
-            if order_by:
-                q += " order by " + str(order_by)
-            if limit:
-                q += " limit " + str(limit)
-            if offset:
-                q += " offset " + str(offset)
+            if(not helper):
+                if order_by:
+                    q += " order by " + str(order_by)
+                if limit:
+                    q += " limit " + str(limit)
+                if offset:
+                    q += " offset " + str(offset)
 
             result = self._run_q(q, args=w_clause[1], fields=f_select, fetch=True, commit=commit)            
 
@@ -298,7 +358,7 @@ class RDBDataTable(BaseDataTable):
         except Exception as e:
             print("Exception e = ", e)
             raise e
-
+    
         return result
 
 
@@ -311,10 +371,49 @@ class RDBDataTable(BaseDataTable):
         try:
             c_list = list(new_record.keys())
             v_list = list(new_record.values())
-            return self._run_insert(self._table_name, c_list, v_list)
+            (cnt, rid) = self._run_insert(self._table_name, c_list, v_list)
+            #if rid:
+            #    raise ValueError("Please include the primary key")
+                ###result={self._auto_increment_column:rid}
+            #else:
+            result = self.get_primary_key_value(new_record)
+            
+            return result 
         except Exception as e:
             print("insert: Exception e = ", e)
             raise(e)
+
+    def get_primary_key_value(self, r):
+        try:
+            result = {k:r[k] for k in self._key_columns}
+        except KeyError:
+            result = None
+        
+        return result
+    
+    '''
+    def _map_key(self, key, related):
+        if not "." in related:
+            related_table_name = self._connect_info['db'] + "." + related
+        else:
+            related_table_name = related
+
+        my_key = key
+        other_key_columns = ds.get_data_table[related_table_name]._get_keys()
+
+        mapped = None
+        for k,v in self._related_resources.items():
+
+            if v['to_me'] == TRUE:
+                r = v['TABLE_SCHEMA'].lower()+ "." + 
+
+    def insert_related(self, key, new_row, related_source):
+
+        related_tbl =ds.get_data_table(related_source)
+        tmp = self._key
+    '''       
+
+
 
     def delete_by_template(self, template):
         """
@@ -335,7 +434,6 @@ class RDBDataTable(BaseDataTable):
         except Exception as e:
             print("Got exception = ", e)
             raise e
-        
         
         return nums
 
@@ -443,9 +541,53 @@ class RDBDataTable(BaseDataTable):
 
             # Beginning part of the SQL statement.
             template =  dict(zip(key_columns, key_fields))
-            self.update_by_template(template, new_values)       
+            return self.update_by_template(template, new_values)       
 
         except Exception as e:
             print("Got exception = ", e)
             raise e
+    
+    def get_join_column_mapping(self, schema1,table1, schema2, table2):
+
+        q = """
+            SELECT
+            TABLE_NAME,
+            COLUMN_NAME,
+            CONSTRAINT_NAME,
+            REFERENCED_TABLE_NAME,
+            REFERENCED_COLUMN_NAME
+            FROM
+            INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+            WHERE
+            (REFERENCED_TABLE_SCHEMA = %s AND REFERENCED_TABLE_NAME = %s
+            AND TABLE_SCHEMA = %s AND TABLE_NAME = %s)
+            OR
+            (REFERENCED_TABLE_SCHEMA = %s AND REFERENCED_TABLE_NAME = %s
+            AND TABLE_SCHEMA = %s AND TABLE_NAME = %s)
+            
+        """
+
+
+        args_= (schema1, table1, schema2, table2, schema2, table2, schema1, table1)
+        constraints =self._run_q(q, args= args_, fields=None, fetch=True, cnx=None, commit=True)
+        result = {}
+
+        for c in constraints:
+
+            n = c['CONSTRAINT_NAME']
+            e = result.get(n, None)
+
+            if e is None:
+                e = {}
+                e['CONSTRAINT_NAME'] = n
+                e['MAP'] = []
+                result[n] = e
+
+            this_m = {k:c[k] for k in ['TABLE_NAME', 'COLUMN_NAME',
+                                    'REFERENCED_TABLE_NAME', 'REFERENCED_COLUMN_NAME']}
+            e['MAP'].append(this_m)
+
+        return result
+
+
 

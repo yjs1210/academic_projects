@@ -1,3 +1,4 @@
+##James Lee - jl5241
 from flask import Flask
 from aeneid.dbservices import dataservice as ds
 from flask import Flask
@@ -24,21 +25,40 @@ def compute_links(result, limit, offset):
 
     self = {"rel":"self","href":request.url}
     result['links'].append(self)
+    if not len(result['data'])<10:
+        next_offset = int(offset) + int(limit) 
 
-    next_offset = int(offset) + int(limit) 
+        base = request.base_url 
+        args = {}
+        
+        if request.args.get('offset',None) is None:
+            for k,v in request.args.items():
+                args[k]=v
+            args['offset'] = next_offset
 
-    base = request.base_url 
-    args = {}
-    for k,v in request.args.items():
-        if not k=='offset':
-            args[k]=v
         else:
-            args[k]=next_offset
-    
-    params = urlencode(args)
-    self = {"rel":"next","href":base + "?" + params}
-    result['links'].append(self)
+            for k,v in request.args.items():
+                if not k=='offset':
+                    args[k]=v
+                else:
+                    args[k]=next_offset
+        
+        params = urlencode(args)
+        self = {"rel":"next","href":base + "?" + params}
+        result['links'].append(self)
 
+    if (not offset is None) & (int(offset)>=10):
+        prev_offset = min(int(offset) - int(limit),0) 
+        base = request.base_url 
+        args = {}
+        for k,v in request.args.items():
+            if not k=='offset':
+                args[k]=v
+            else:
+                args[k]=prev_offset
+        params = urlencode(args)
+        self = {"rel":"prev","href":base + "?" + params}
+        result['links'].append(self)
 
     return result
 
@@ -149,7 +169,7 @@ def api():
     return 'You probably want to call an API on one of the resources.'
 
 
-@app.route('/api/<dbname>/<resource_name>/<primary_key>',methods=['GET','PUT','DELETE','UPDATE','POST'])
+@app.route('/api/<dbname>/<resource_name>/<primary_key>',methods=['GET','PUT','DELETE'])
 def handle_resource(dbname, resource_name, primary_key):
 
     resp = Response("Internal server error", status=500, mimetype="text/plain")
@@ -172,6 +192,7 @@ def handle_resource(dbname, resource_name, primary_key):
             result = ds.get_by_primary_key(resource, key_columns, field_list=field_list)
             if result:
                 # We managed to find a row. Return JSON data and 200
+                result = {"data": result}
                 result_data = json.dumps(result, default=str)
                 resp = Response(result_data, status=200, mimetype='application/json')
             else:
@@ -179,37 +200,125 @@ def handle_resource(dbname, resource_name, primary_key):
 
        
         elif request.method == 'DELETE':
-            result = ds.delete(resource,key_columns)
+            result = ds.delete_by_key(resource,key_columns)
             if result and result >= 1:
                 resp = Response("OK", status=200, mimetype='text/plain')
             else:
                 resp = Response("NOT FOUND", status=404, mimetype='text/plain')
        
         #@TODO DO THIS UPDATE ROW BASED ON KEY
-        elif request.method =='UPDATE':
-            new_r = request.get_json()
-            result = ds.create(resource, new_r)
-            if result and result == 1:
-                resp = Response("CREATED",status=201,mimetype="text/plain")
-
-        #@TODO DO THIS - CREATE A ROW BASED ON KEY
-        elif request.method =='POST':
-            new_r = request.get_json()
-            result = ds.create(resource, new_r)
-            if result and result == 1:
-                resp = Response("CREATED",status=201,mimetype="text/plain")
+        elif request.method =='PUT':
+            check = ds.get_by_primary_key(resource, key_columns)
+            ###Create if result is None
+            if check is None:
+                resp = Response("NOT FOUND",status=404,mimetype="text/plain")
+            ###Update if result is not None
+            else:    
+                new_r = request.get_json()
+                result = ds.update_by_key(resource, key_columns, new_r)
+                if (not result is None) and (result == 1):
+                    resp = Response("UPDATED",status=201,mimetype="text/plain")
+                if (not result is None) and (result == 0):
+                    resp = Response("UPDATED BUT YOU ENTERED THE SAME VALUES. NONE CHANGED ",status=201,mimetype="text/plain")
 
         else: 
-            result = Response("I am a teapot that will not PUT", status=422,mimetype="text/plain")
+            result = Response("Unimplmented method type please try GET, PUT, or DELETE", status=500,mimetype="text/plain")
             return result 
 
     except Exception as e:
-        # We need a better overall approach to generating correct errors.
+        resp = Response("STATUS 422 "+str(e), status=422, mimetype="text/plain")
         utils.debug_message("Something awlful happened, e = ", e)
 
     return resp
 
-@app.route('/api/<dbname>/<resource_name>',methods=['GET','POST','UPDATE'])
+@app.route('/api/<dbname>/<resource_name>/<primary_key>/<subresource_name>',methods=['GET','POST'])
+def handle_path_resource(dbname, resource_name,primary_key,subresource_name):
+
+    resp = Response("Internal server error", status=500, mimetype="text/plain")
+
+    try:
+        resource = dbname + "." + resource_name
+        subresource= dbname + "." + subresource_name 
+        ##make args mutable 
+        request.args = request.args.copy()
+        actual_key = ds.get_key(resource)
+        keys_input = primary_key.split('_')
+        if len(keys_input) != len(actual_key):
+            raise ValueError("Wrong key length please try "+actual_key)
+        
+        benchmark_row = ds.get_by_primary_key(resource,keys_input)
+        
+
+        if request.method == 'GET':
+            # Form the compound resource names dbschema.table_name
+
+            foreign_key = ds.get_foreign_key(resource,subresource)
+            for k,v in foreign_key.items():
+                map = v['MAP'][0]
+                request.args[map['REFERENCED_COLUMN_NAME']] = benchmark_row[0][map['COLUMN_NAME']]
+
+            # Get the field list if it exists.
+            field_list = request.args.get('fields', None)
+            if field_list is not None:
+                field_list = field_list.split(",")
+
+            # for queries of type 127.0.0.1:5000/api/lahman2017/batting?teamID=BOS&limit=10
+            limit = min(int(request.args.get('limit',10)),10)
+            offset = request.args.get('offset',0)
+            order_by = request.args.get('order_by', None)
+            children = request.args.get('children', None)
+
+            # The query string is of the form ?f1=v1&f2=v2& ...
+            # This maps to a query template of the form { "f1" : "v1", ... }
+            # We need to ignore the fields parameters.
+            tmp = None
+            for k,v in request.args.items():
+                if (not k == 'fields') and (not k == 'limit') and (not k=='offset') and \
+                    (not k == 'order_by') and (not k == 'children'):
+                    if tmp is None:
+                        tmp = {}
+                    tmp[k] = v
+            
+            # Find by template
+            result = ds.get_by_template(subresource, tmp, field_list=field_list, limit=limit, offset=offset,order_by = order_by,children = children)
+            
+            if result:
+                result = {"data": result}
+                result = compute_links(result, limit, offset)
+                result_data = json.dumps(result, default=str)
+                resp = Response(result_data, status=200, mimetype='application/json')
+            else:
+                resp = Response("Not found", status=404, mimetype="text/plain")
+        
+        elif request.method =='POST':
+
+            actual_key = ds.get_key(resource)
+            keys_input = primary_key.split('_')
+            if len(keys_input) != len(actual_key):
+                raise ValueError("Wrong key length please try "+actual_key)
+
+            new_r = request.get_json()
+
+            foreign_key = ds.get_foreign_key(resource,subresource)
+            for k,v in foreign_key.items():
+                map = v['MAP'][0]
+                new_r[map['COLUMN_NAME']] = benchmark_row[0][map['REFERENCED_COLUMN_NAME']]
+            ####Might need to handle multiple keys here
+            k=result = ds.create(subresource, new_r)
+            if k:
+                location = get_location(dbname, subresource_name, k )
+                resp = Response("CREATED",status=201,mimetype="text/plain")
+                resp.headers['Location'] = location
+
+    except Exception as e:
+        resp = Response("STATUS 422 "+str(e), status=422, mimetype="text/plain")
+        utils.debug_message("Something awlful happened, e = ", e)
+
+    return resp
+
+    
+
+@app.route('/api/<dbname>/<resource_name>',methods=['GET','POST'])
 def handle_collection(dbname, resource_name):
 
     resp = Response("Internal server error", status=500, mimetype="text/plain")
@@ -228,23 +337,23 @@ def handle_collection(dbname, resource_name):
 
             # for queries of type 127.0.0.1:5000/api/lahman2017/batting?teamID=BOS&limit=10
             limit = min(int(request.args.get('limit',10)),10)
-            offset = request.args.get('offset',10)
+            offset = request.args.get('offset',0)
             order_by = request.args.get('order_by', None)
+            children = request.args.get('children', None)
 
             # The query string is of the form ?f1=v1&f2=v2& ...
             # This maps to a query template of the form { "f1" : "v1", ... }
             # We need to ignore the fields parameters.
             tmp = None
             for k,v in request.args.items():
-                if (not k == 'fields') and (not k == 'limit') and (not k=='offset') and (not k == 'order_by'):
+                if (not k == 'fields') and (not k == 'limit') and (not k=='offset') and \
+                    (not k == 'order_by') and (not k == 'children'):
                     if tmp is None:
                         tmp = {}
                     tmp[k] = v
-
-
-
+            
             # Find by template
-            result = ds.get_by_template(resource, tmp, field_list=field_list, limit=limit, offset=offset,order_by = order_by)
+            result = ds.get_by_template(resource, tmp, field_list=field_list, limit=limit, offset=offset,order_by = order_by,children = children)
             
             if result:
                 result = {"data": result}
@@ -256,18 +365,24 @@ def handle_collection(dbname, resource_name):
         
         elif request.method =='POST':
             new_r = request.get_json()
-            result = ds.create(resource, new_r)
-            if result and result == 1:
+            k=result = ds.create(resource, new_r)
+
+            if k:
+                location = get_location(dbname, resource_name, k )
                 resp = Response("CREATED",status=201,mimetype="text/plain")
+                resp.headers['Location'] = location
 
-
-    
     except Exception as e:
+        resp = Response("STATUS 422 "+ str(e), status=422, mimetype="text/plain")
         utils.debug_message("Something awlful happened, e = ", e)
 
     return resp
 
-
+def get_location(db_name, resource_name ,k):
+    ks = [str(kk) for kk in k.values()]
+    ks = "_".join(ks)
+    result = "/api/" + db_name + "/" +resource_name + "/" + ks
+    return result 
 
 if __name__ == '__main__':
     app.run()
