@@ -1,11 +1,27 @@
 # Your implementation goes in this file.
-from BaseDataTable import BaseDataTable
+from src.BaseDataTable import BaseDataTable
 import csv
 import copy
+import json
 
+
+class Index():
+    def __init__(self):
+        self._placeholder = None
+
+    def to_json(self):
+        result = {}
+        result["name"] = self.name
+        result["columns"] = self.columns
+        result["kind"]  = self.kind
+        result["table_name"]  = self.table_name
+        result["index_data"] = self._index_data
+        return result
+
+
+    
 class CSVDataTable(BaseDataTable):
     
-   
     def debug_message(self, *m):
         """
         Prints some debug information if self._debug is True
@@ -79,7 +95,34 @@ class CSVDataTable(BaseDataTable):
                 if self._rows is None:
                     self._rows = []
                 self._add_row(row)
-            
+    
+    def save(self):
+
+        d = {
+            "state":{
+                "table_name" : self._table_name,
+                "primary_key_columns":self._key_columns,
+                "next_rid": self._get_next_row_id(),
+                "column_names": self._column_names
+            }
+        }
+
+        fn = CSVDataTable._default_directory + self._table_name + ".json"
+        d["rows"] = self._rows
+
+        for k,v in self._indexes.items():
+            idxs = d.get("indexes", {})
+            idx_string = v.to_json()
+            idxs[k] = idx_string
+            d['indexes'] = idxs
+        
+        d = json.dumps(d, indent=2)
+        with open(fn,"w+") as outfile:
+            outfile.write(d)
+
+    @TODO    
+    def _get_next_row_id(self):
+        return 1
     
     def _check_keys(self, key_fields): 
         if len(self._key_columns) != len(key_fields):
