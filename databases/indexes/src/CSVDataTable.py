@@ -1,13 +1,29 @@
 # Your implementation goes in this file.
-from src.BaseDataTable import BaseDataTable
 import csv
 import copy
 import json
 
 
 class Index():
-    def __init__(self):
-        self._placeholder = None
+    def __init__(self, index_name, index_columns,kind):
+        self._index_name = index_name
+        self._columns = index_columns
+        self._kind = kind 
+        self._index_data = None
+
+    def compute_key(self,row):
+        key_v = [row[k] for k in self._columns]
+        key_v = "_".join(key_v)
+        return key_v 
+
+    def add_to_index(self,row,rid):
+        key = self.compute_key(row)
+        bucket = self._index_data.get(key, [])
+        if self._kind != "INDEX":
+            if len(bucket)>0:
+                raise KeyError("Duplicate Key")
+        bucket.append(rid)
+        self._index_data[key] = bucket
 
     def to_json(self):
         result = {}
@@ -17,10 +33,8 @@ class Index():
         result["table_name"]  = self.table_name
         result["index_data"] = self._index_data
         return result
-
-
     
-class CSVDataTable(BaseDataTable):
+class CSVDataTable():
     
     def debug_message(self, *m):
         """
@@ -32,7 +46,7 @@ class CSVDataTable(BaseDataTable):
             print(" *** DEBUG:", *m)
             
 
-    def __init__(self, table_name, connect_info, key_columns=None, debug=True):
+    def __init__(self, table_name, column_names=None,primary_key_columns=None, debug=True, loadit=False):
         """
 
         :param table_name: Name of the table. This is the table name for an RDB table or the file name for
@@ -43,16 +57,29 @@ class CSVDataTable(BaseDataTable):
             the columns are ['playerID', 'teamID', 'yearID']
         :param debug: If true, print debug messages.
         """
-
-        super().__init__(table_name, connect_info, key_columns, debug)
-        self._rows = None
-        self._column_names = None
+        
+        self._primary_key_columns = primary_key_columns
+        self._table_name = table_name
+        self._column_names = column_names
+        self._indexes = None 
         self.debug = debug
+
+        if not loadit:
+            if column_names is None or table_name is None:
+                raise ValueError("Did not provide table_name for column_names for table create.")
+            
+            self._next_row_id = 1
+
+            self._rows = {}
+
+            if primary_key_columns:
+                self.add_index("PRIMARY", self._primary_key_columns, "PRIMARY")
+
             
     def __str__(self):
-        result = str(type(self)) + ": name = " + self.table_name
-        result += "\nconnect_info = " +str(self.connect_info)
-        result += '\nkey columns = : ' + str(self._key_columns) + '\n'
+        result = str(type(self)) + ": name = " + self._table_name
+        #result += "\nconnect_info = " +str(self.connect_info)
+        result += '\nkey columns = : ' + str(self._primary_key_columns) + '\n'
         
         if self._column_names is not None:
             result += "\nColumn names = " +str(self._column_names)
@@ -61,47 +88,63 @@ class CSVDataTable(BaseDataTable):
         
         
         return result
+
+    def add_index(self,index_name,columns,kind):
+        if self._indexes is None:
+            self._indexes = {}
+        
+        self._indexes[index_name]  = Index(index_name=index_name,columns = columns, kind=kind)
+        
     
+    def import_date(self,rows):
+        for r in rows:
+            self.insert(r)
+
+
+    def get_new_row_id(self):
+        self._next_row_id +=1
+        return self._next_row_id
+
+    def insert(self,r):
+        if self._rows is None:
+            self._rows = {}
+        rid = self.get_new_row_id()
+
+        if self._indexes is not None:
+            for k,v in self._indexes.items():
+                v.add_to_index(r,rid)
+
+        self._rows[rid]  = copy.copy(r)
+
     def _get_keys(self,row):
-        out = [row[k] for k in self._key_columns]
-        if len(out) != len(self._key_columns):
+        out = [row[k] for k in self._primary_key_columns]
+        if len(out) != len(self._primary_key_columns):
             raise ValueError("Wrong Length or duplicate keys")
         return out 
     
-    def _add_row(self, row):
-        if self._rows is None:
-            self._rows = []
-        
-        keys = self._get_keys(row)
-        check = self.find_by_primary_key(keys)
-        
-        if check is not None:
-            raise ValueError("Duplicated keys detected")
-            
-        for k, v in row.items():
-            if k not in self._column_names:
-                raise ValueError(k+" not in columns")
 
-        self._rows.append(row)
     
     def load(self):
-        directory= self._connect_info['directory'] + self._connect_info['file_name']
-        self._rows = []
-        with open(directory, mode='r') as input_rows:
-            csv_reader = csv.DictReader(input_rows)
-            for row in csv_reader:
-                if self._column_names is None:
-                    self._column_names = list(row.keys())
-                if self._rows is None:
-                    self._rows = []
-                self._add_row(row)
-    
+
+        result = []
+        cols = None
+        with open(fn, "r") as infile:
+            rdr = csv.DictReader(infile)
+            cols = rdr.fieldnames
+            for r in rdr:
+                result.append(r)
+
+        return result, cols
+
+            
+
+
     def save(self):
 
         d = {
             "state":{
                 "table_name" : self._table_name,
-                "primary_key_columns":self._key_columns,
+                "primary_key_columns":self._primary_key_columns,
                 "next_rid": self._get_next_row_id(),
                 "column_names": self._column_names
             }
@@ -120,13 +163,13 @@ class CSVDataTable(BaseDataTable):
         with open(fn,"w+") as outfile:
             outfile.write(d)
 
-    @TODO    
+    #@TODO    
     def _get_next_row_id(self):
         return 1
     
     def _check_keys(self, key_fields): 
-        if len(self._key_columns) != len(key_fields):
-            raise ValueError("Entered wrong key_fields please try entering " + ",".join(self._key_columns))
+        if len(self._primary_key_columns) != len(key_fields):
+            raise ValueError("Entered wrong key_fields please try entering " + ",".join(self._primary_key_columns))
                 
     def _check_fields(self, fields):
         actual_fields = self._column_names
@@ -151,7 +194,7 @@ class CSVDataTable(BaseDataTable):
         """
         try:
             self._check_keys(key_fields)
-            template = dict(zip(self._key_columns, key_fields))
+            template = dict(zip(self._primary_key_columns, key_fields))
             result = self.find_by_template(template, field_list)
             if not result is None:
                 return result
@@ -197,7 +240,7 @@ class CSVDataTable(BaseDataTable):
         """
         
         
-        from DerivedDataTable import DerivedDataTable
+        from src.DerivedDataTable import DerivedDataTable
         if field_list is not None:
             self._check_fields(field_list)
 
@@ -213,14 +256,6 @@ class CSVDataTable(BaseDataTable):
             out = DerivedDataTable("FBT:" + self._table_name, out)
         return out
 
-    def insert(self, new_record):
-        """
-
-        :param new_record: A dictionary representing a row to add to the set of records. Raises an exception if this
-            creates a duplicate primary key.
-        :return: None
-        """
-        self._add_row(new_record)
 
     def delete_by_template(self, template):
         """
@@ -250,7 +285,7 @@ class CSVDataTable(BaseDataTable):
         """
 
         self._check_keys(key_fields)
-        template = dict(zip(self._key_columns, key_fields))
+        template = dict(zip(self._primary_key_columns, key_fields))
         return self.delete_by_template(template)
     
 
@@ -268,7 +303,7 @@ class CSVDataTable(BaseDataTable):
 
         key_check = []
         for k in new_values:
-            if k in self._key_columns:
+            if k in self._primary_key_columns:
                 key_check.append(k)
         
         if key_check != []:
@@ -276,7 +311,7 @@ class CSVDataTable(BaseDataTable):
             
             for row in self._rows:
                 key_row = dict()
-                for key in self._key_columns:
+                for key in self._primary_key_columns:
                     key_row_check[key] = row[key]
                 if self._matches_template(template, row):
                     for key in key_check:
@@ -308,5 +343,5 @@ class CSVDataTable(BaseDataTable):
         """
 
         self._check_keys(key_fields)
-        template = dict(zip(self._key_columns, key_fields))
+        template = dict(zip(self._primary_key_columns, key_fields))
         return self.update_by_template(template, new_values)

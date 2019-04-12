@@ -1,5 +1,5 @@
-from aeneid.dbservices.CSVDataTable import CSVDataTable
-from aeneid.dbservices.CSVDataTable import CSVDataTable
+from src.CSVDataTable import CSVDataTable
+from src.CSVDataTable import CSVDataTable
 
 class DerivedDataTable(CSVDataTable):
     """
