@@ -1,3 +1,4 @@
+##James Lee - jl5241
 # Your implementation goes in this file.
 import csv
 import copy
@@ -5,11 +6,12 @@ import json
 
 
 class Index():
-    def __init__(self, index_name, index_columns,kind):
+    def __init__(self, index_name, table, index_columns,kind, loadit=None):
         self._index_name = index_name
         self._columns = index_columns
         self._kind = kind 
         self._index_data = None
+        self._table = table
 
     def compute_key(self,row):
         key_v = [row[k] for k in self._columns]
@@ -17,23 +19,68 @@ class Index():
         return key_v 
 
     def add_to_index(self,row,rid):
+        if self._index_data is None:
+            self._index_data = {}
         key = self.compute_key(row)
-        bucket = self._index_data.get(key, [])
-        if self._kind != "INDEX":
-            if len(bucket)>0:
+        bucket = self._index_data.get(key, None)
+        if self._kind != "INDEX" and bucket is not None:
                 raise KeyError("Duplicate Key")
-        bucket.append(rid)
+        else:
+            if bucket is None:
+                bucket = {}
+        bucket[rid] = row
         self._index_data[key] = bucket
+   
+    def matches_index(self, template):
+
+        k = set(list(template.keys()))
+        c = set(self._columns)
+
+        if c.issubset(k):
+            if self._index_data is not None:
+                kk = len(self._index_data.keys())
+            else:
+                kk = 0
+        else: kk= None 
+        
+        return kk 
 
     def to_json(self):
         result = {}
-        result["name"] = self.name
-        result["columns"] = self.columns
-        result["kind"]  = self.kind
-        result["table_name"]  = self.table_name
+        result["name"] = self._index_name
+        result["columns"] = self._columns
+        result["kind"]  = self._kind
+        result["table_name"]  = self._table._table_name
         result["index_data"] = self._index_data
         return result
+
+    def from_json(self,table,loadit):
+        return None
     
+    def __str__(self):
+        result = str(type(self)) + ": name = " + self._table._table_name
+        #result += "\nconnect_info = " +str(self.connect_info)
+        result += '\nindex columns = : ' + str(self._columns) + '\n'
+        result += '\nindex kind: ' + str(self._kind)
+
+        return result
+    
+    def find_rows(self,tmp):
+        return None
+
+    def get_no_of_entries(self):
+        return len(list(self._index_data.keys()))
+    
+    def delete_from_index(self,row,rid):
+        index_key = self.compute_key(row)
+        bucket = self._index_data.get(index_key,None)
+
+        if bucket is not None:
+            bucket.remove(rid)
+
+            if len(bucket) == 0:
+                del (self._index_data[index_key])
+
 class CSVDataTable():
     
     def debug_message(self, *m):
@@ -57,7 +104,7 @@ class CSVDataTable():
             the columns are ['playerID', 'teamID', 'yearID']
         :param debug: If true, print debug messages.
         """
-        
+        self._default_directory = '/CSVFile/'
         self._primary_key_columns = primary_key_columns
         self._table_name = table_name
         self._column_names = column_names
@@ -73,7 +120,7 @@ class CSVDataTable():
             self._rows = {}
 
             if primary_key_columns:
-                self.add_index("PRIMARY", self._primary_key_columns, "PRIMARY")
+                self.add_index("PRIMARY",  column_list = self._primary_key_columns, kind ="PRIMARY")
 
             
     def __str__(self):
@@ -85,18 +132,41 @@ class CSVDataTable():
             result += "\nColumn names = " +str(self._column_names)
         if self._rows is not None:
             result += '\nrow numbers: ' + str(len(self._rows))
-        
-        
+        if self._indexes is not None:
+            result += '\nindexes:' 
+            for k,v in self._indexes.items():
+                result += '\n index_name :'+ str(v._index_name) + ' index columns: ' +str(v._columns)
         return result
 
-    def add_index(self,index_name,columns,kind):
+    def add_index(self,name,kind,column_list):
+
+        if kind not in ["PRIMARY","UNIQUE","INDEX"]:
+            raise ValueError("Wrong type of index")
+
+        if name is None or column_list is None or kind is None:
+            raise ValueError("Could not add index")
+        
         if self._indexes is None:
             self._indexes = {}
         
-        self._indexes[index_name]  = Index(index_name=index_name,columns = columns, kind=kind)
-        
+        idx = self._indexes.get(name,None)
+        if idx is not None:
+            raise ValueError("Dupllicate Index Name")
+
+        self._indexes[name]  = Index(index_name=name,table = self, index_columns = column_list, kind=kind)
+
+        self.build(name)
+
+        #index = Index(index_name=index_name,self, index_columns = columns, kind=kind)
+        #self._indexes[index_name]  = index
+        #index._build()
+
+    def build(self,i_name):
+        idx = self._indexes[i_name]
+        for k,v in self._rows.items():
+            idx.add_to_index(v,k)       
     
-    def import_date(self,rows):
+    def import_data(self,rows):
         for r in rows:
             self.insert(r)
 
@@ -145,7 +215,7 @@ class CSVDataTable():
             "state":{
                 "table_name" : self._table_name,
                 "primary_key_columns":self._primary_key_columns,
-                "next_rid": self._get_next_row_id(),
+                "next_rid": self._next_row_id,
                 "column_names": self._column_names
             }
         }
@@ -162,10 +232,6 @@ class CSVDataTable():
         d = json.dumps(d, indent=2)
         with open(fn,"w+") as outfile:
             outfile.write(d)
-
-    #@TODO    
-    def _get_next_row_id(self):
-        return 1
     
     def _check_keys(self, key_fields): 
         if len(self._primary_key_columns) != len(key_fields):
@@ -183,30 +249,18 @@ class CSVDataTable():
         else:
             return {f:row[f] for f in field_list}
 
-    def find_by_primary_key(self, key_fields, field_list=None):
-        """
+    def get_rows_with_rids(self):
+        return self._rows
 
-        :param key_fields: The values for the key_columns, in order, to use to find a record. For example,
-            for Appearances this could be ['willite01', 'BOS', '1960']
-        :param field_list: A subset of the fields of the record to return. The CSV file or RDB table may have many
-            additional columns, but the caller only requests this subset.
-        :return: None, or a dictionary containing the columns/values for the row.
-        """
-        try:
-            self._check_keys(key_fields)
-            template = dict(zip(self._primary_key_columns, key_fields))
-            result = self.find_by_template(template, field_list)
-            if not result is None:
-                return result
-            else:
-                return None
-    
-        except Exception as e:
-            print("Got exception = ", e)
-            raise e
+    def get_rows(self):
+        if self._rows is not None:
+            result = []
+            for k,v in self._rows.items():
+                result.append(v)
+        else:
+            result = None 
 
-
-    def _matches_template(self, tmp, row):
+    def _matches_template(self, row,tmp):
         """
 
         :param template: A dictionary of the form
@@ -217,47 +271,227 @@ class CSVDataTable():
 
             :param row: An ordered dict
         """
-        if tmp is None:
-            return True
         
-        for key in tmp.keys():
-            value = row.get(key,None)
-            if tmp[key] != value:
-                return False
+        if tmp is None or tmp =={}:
+            result = True
+        else:
 
+            for key in tmp.keys():
+                value = row.get(key,None)
+                if tmp[key] != value:
+                    return False
         return True
 
-    def find_by_template(self, template, field_list=None, limit=None, offset=None, order_by=None):
-        """
+    def get_best_index(self,t):
 
-        :param template: A dictionary of the form { "field1" : value1, "field2": value2, ...}. The function will return
-            a derived table containing the rows that match the template.
-        :param field_list: A list of requested fields of the form, ['fielda', 'fieldb', ...]
-        :param limit: Do not worry about this for now.
-        :param offset: Do not worry about this for now.
-        :param order_by: Do not worry about this for now.
-        :return: A derived table containing the computed rows.
+        best =None
+        n = None
+
+        if self._indexes is not None:
+
+            #For every index name and Index Object
+            for k,v in self._indexes.items():
+
+                #determine if this index matches the template
+                cnt = v.matches_index(t)
+
+                ## If it does
+                if cnt is not None:
+                    ##if I not have a best. This is best.
+                    if best is None:
+                        best = cnt   #best value is cnt
+                        n =k #name of best index is n
+                    else:
+                        if cnt>best: #this one is "better"
+                            best = v.get_no_of_entries() #count the keys 
+                            n =k
+        return n 
+    
+    def find_rows(self,tmp):
+
+        t_keys = tmp.keys()
+        t_vals = [tmp[k] for k in self._column_names]
+        t_s = "_".join(t_vals)
+
+        d = self._index_data.get(t_s,None)
+
+        if d is not None:
+            d = list(d.keys())
+
+        return d 
+
+    def find_by_index(self,tmp,idx):
+        r = idx.find_rows(tmp)
+        res = [self._rows[k] for k in r]
+        return res
+    
+    def find_by_scan_template(self,tmp,rows):
+        result = []
+        for k,v in rows:
+            if self.matches_template(v,tmp):
+                result.append({k:v})
+        return result 
+
+    def find_by_template(self, tmp, fields= None, use_index =True):       
+        
+        if tmp is None:
+            new_t = CSVDataTable(table_name = "Derived:" + self._table_name, loadit=True)
+            new_t.load_data(table_name = "Derived:" + self._table_name, rows=self.get_row())
+            return new_t
+        
+        result_rows = self.find_by_template_rows(tmp,fields,use_index)
+
+        new_t = CSVDataTable(table_name ="Derived:" + self._table_name, loadit=True)
+        new_t.load_from_rows(table_name = "Derived:" + self._table_name, rows=result_rows)
+
+        return new_t 
+
+    def find_by_template_rows(self, tmp, fields=None, use_index=True):
+
+        if tmp is None:
+            return self._rows
+        
+
+        idx = self.get_best_index(tmp)
+        
+        if idx  is None or use_index == False:
+            result = self.find_by_scan_template(tmp,self._rows)
+        else:
+            idx = self._indexes[idx] 
+            res = self.find_by_index(tmp,idx)
+            result = self.find_by_scan_template(tmp,res)
+
+        if result:
+            final_r = {}
+            for r in result:
+                if fields is not None:
+                    final_new_r = {k:r[k] for k in fields}
+                else:
+                    final_new_r = r
+                final_r.append(final_new_r)
+            return final_r
+        
+        else: 
+            return None
+
+    def get_index_and_selectivity(self,cols):
+        on_template = dict(zip(cols,[None]*len(cols)))
+        best= None
+        n = self.get_best_index(on_template)
+
+        if n is not None:
+            best = len(list(self._rows.keys()))/(self._indexes[n].get_no_of_entries())
+        
+        return n,best
+
+        
+    @staticmethod
+    def _get_scan_probe(l_table, r_table, on_fields):
+
+        ###Basically compares the indeses and returns the one with better index
+        s_best , s_selective = l_table.get_index_and_selectivity(on_fields)
+        r_best, r_selective = r_table.get_index_and_selectivity(on_fields)
+
+        result = l_table, r_table
+        if s_best is None and r_best is None:
+            result=  l_table, r_table
+        elif s_best is None and r_best is not None:
+            result= r_table, l_table
+        elif s_best is not None and r_best is None:
+            result = l_table, r_table
+        elif s_best is not None and r_best is not None and s_selective < r_selective:
+            result= r_table, l_table
+        return result 
+
+    def on_clause_to_where(on_c,r):
+        result = {c:r[c] for c in on_c}
+        return result 
+    
+    ###DO THISS
+    def _get_specific_where(self,wc):
+        result = {}
+        if wc is not None:
+            for k,v in wc.items():
+                kk = k.split(".")
+                if len(kk)==1:
+                    return None 
+    
+    def _get_specific_project(self, p_clause):
+        result = []
+        if p_clause is not None:
+            for k in p_clause:
+                kk = k.split(".")
+                if len(kk)==1:
+                    result.append(k)
+                elif kk[0]== self._table_name:
+                    result.append(kk[1])
+        if result ==[]:
+            result = None
+        
+        ###??/
+        return result 
+
+    
+    def join(self, r_table, on_clause, w_clause=None, p_clause= None, optimize = True):
+        
         """
         
+        self in this case is the left table
+        on_fields = list of columns that exist in both tables
+        where_template = standard_tempalte of the form { col : value, col:value}
+        project_fields: project, what columns do I want.
+
         
-        from src.DerivedDataTable import DerivedDataTable
-        if field_list is not None:
-            self._check_fields(field_list)
+        """
 
-        out = None
-        for r in self._rows:
-            if self._matches_template(template, r):
-                if out is None:
-                    out = []
-                new_r = self._project(r, field_list)
-                out.append(copy.copy(new_r))
-                
-        if out is not None:
-            out = DerivedDataTable("FBT:" + self._table_name, out)
-        return out
+        ##pick which should be the scan tablea nd which should be the probe table
+        if optimize:
+            s_table, p_table = self._get_scan_probe(self,r_table, on_clause)
+        else:
+            s_table = self
+            p_table = r_table
+
+        if s_table != self and optimize:
+            print("SWAPPED")
+        else:
+            print("NOT SWAPPING")
+
+        if optimize:
+            s_tmp = s_table._get_specific_where(w_clause)
+            s_proj = s_table._get_specific_project(p_clause)
+            s_rows = s_table.find_by_template(s_tmp,s_proj)
+        
+        else:
+            s_rows = s_table
+        
+        scan_rows = s_rows.get_rows()
+
+        result = []
+
+        for r in scan_rows:
+            p_where = CSVDataTable.on_clause_to_where(on_clause,r)
+            p_project = p_table._get_specific_project(p_clause)
+
+            p_rows = p_table.find_by_template(p_where,p_project)
+            p_rows = p_rows.get_rows()
+
+            if p_rows:
+                for r2 in p_rows:
+                    new_r = {**r,**r2}
+                    result.append(new_r)
+
+        tn = "JOIN(" + self._table_name +"," + r.table._table_name + ")"
+        final_result = CSVDataTable(table_name = tn, loadit=True)
+        final_result.load_from_rows(table_name = tn, rows=result)
+
+        ###Apply template to result??? 
+
+        return join_result
 
 
-    def delete_by_template(self, template):
+
+
+    def delete(self, template):
         """
 
         Deletes all records that match the template.
@@ -265,83 +499,17 @@ class CSVDataTable():
         :param template: A template.
         :return: A count of the rows deleted.
         """
-        cnt = 0
-        new_rows = []
-        for r in self._rows:
-            if not self._matches_template(template, r):
-                new_rows.append(copy.copy(r))
-            else:
-                cnt +=1
-        self._rows = new_rows
-        return cnt
-
-    def delete_by_key(self, key_fields):
-        """
-
-        Delete record with corresponding key.
-
-        :param key_fields: List containing the values for the key columns
-        :return: A count of the rows deleted.
-        """
-
-        self._check_keys(key_fields)
-        template = dict(zip(self._primary_key_columns, key_fields))
-        return self.delete_by_template(template)
-    
-
-    def update_by_template(self, template, new_values):
-        """
-
-        :param template: A template that defines which matching rows to update.
-        :param new_values: A dictionary containing fields and the values to set for the corresponding fields
-            in the records. This returns an error if the update would create a duplicate primary key. NO ROWS are
-            update on this error.
-        :return: The number of rows updates.
-        """
-
-        self._check_fields(new_values.keys())
-
-        key_check = []
-        for k in new_values:
-            if k in self._primary_key_columns:
-                key_check.append(k)
+        res = self.find_by_template_rows(tmp)
+        rows = result 
         
-        if key_check != []:
-            key_row_check = []
-            
-            for row in self._rows:
-                key_row = dict()
-                for key in self._primary_key_columns:
-                    key_row_check[key] = row[key]
-                if self._matches_template(template, row):
-                    for key in key_check:
-                        key_row[key] = new_values[key]
-                        
-                key_row_check.append(copy.copy(key_row))
-                
-            for i in range(len(key_row_check)-1):
-                for j in range(i + 1, len(key_row_check)):
-                    if key_row_check[i] == key_row_check[j]:
-                        raise ValueError("Update will create duplicate primary key")
-                        
-        out = 0
-        for row in self._rows:
-            if self._matches_template(template, row):
-                out += 1
-                for k, v in new_values.items():
-                    row[k] = v
-        return out
+        if rows is not None:
+            for k in rows.keys():
+                self._remove_row(k)
+    
+    def _remove_row(self,rid):
 
-    def update_by_key(self, key_fields, new_values):
-        """
+        r=self._rows[rid]
+        for n,idx in self._indexes.items():
+            idx.delete_from_index(r,rid)
 
-        :param key_fields: List of values for primary key fields
-        :param new_values: A dictionary containing fields and the values to set for the corresponding fields
-            in the records. This returns an error if the update would create a duplicate primary key. NO ROWS are
-            update on this error.
-        :return: The number of rows updates.
-        """
-
-        self._check_keys(key_fields)
-        template = dict(zip(self._primary_key_columns, key_fields))
-        return self.update_by_template(template, new_values)
+        del[self._rows[rid]]

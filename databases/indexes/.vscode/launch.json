@@ -5,15 +5,6 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: custom",
-            "type": "python",
-            "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}",
-            "env": {"PYTHONPATH": "${workspaceRoot}"}
-        },
-        {
             "name": "Python: Current File (Integrated Terminal)",
             "type": "python",
             "request": "launch",

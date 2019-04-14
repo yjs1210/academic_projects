@@ -1,10 +1,84 @@
+##James Lee - jl5241
+
+************************************************************
+
+
+
+*************TEST ONE, TEST LOAD FUNCTIOn**************
 T =  <class 'src.CSVDataTable.CSVDataTable'>: name = People
 key columns = : ['playerID']
 
 Column names = ['playerID', 'birthYear', 'birthMonth', 'birthDay', 'birthCountry', 'birthState', 'birthCity', 'deathYear', 'deathMonth', 'deathDay', 'deathCountry', 'deathState', 'deathCity', 'nameFirst', 'nameLast', 'nameGiven', 'weight', 'height', 'bats', 'throws', 'debut', 'finalGame', 'retroID', 'bbrefID']
 row numbers: 19370
+indexes:
+ index_name :PRIMARY index columns: ['playerID']
+
+
+*************TEST THREE CREATING A CSVDATATABLE OBJECT**************
 T =  <class 'src.CSVDataTable.CSVDataTable'>: name = Test
 key columns = : ['foo']
 
 Column names = ['foo', 'bar']
 row numbers: 0
+indexes:
+ index_name :PRIMARY index columns: ['foo']
+
+
+*************TEST FOUR CREATING AN INDEX**************
+<class 'src.CSVDataTable.Index'>: name = Test
+index columns = : ['last_name', 'first_name']
+
+index kind: INDEX
+KV =  Ferguson_Donald added to index
+
+
+*************TEST FIVE CREATING CONFLICTING INDEX THROWS ERROR WHEN UNIQUE**************
+We caught an error:  'Duplicate Key'
+
+
+*************TEST SIX, CREATE WITH INDEX AND THEN ADD ANOTHER INDEX**************
+
+***ORIGINALLY ***
+
+<class 'src.CSVDataTable.CSVDataTable'>: name = Offices
+key columns = : ['officeCode']
+
+Column names = ['officeCode', 'city', 'phone', 'addressLine1', 'addressLine2', 'state', 'country', 'postalCode', 'territory']
+row numbers: 0
+indexes:
+ index_name :PRIMARY index columns: ['officeCode']
+
+***ADDING ANOTHER INDEX, LOCATION ***
+
+<class 'src.CSVDataTable.CSVDataTable'>: name = Offices
+key columns = : ['officeCode']
+
+Column names = ['officeCode', 'city', 'phone', 'addressLine1', 'addressLine2', 'state', 'country', 'postalCode', 'territory']
+row numbers: 0
+indexes:
+ index_name :PRIMARY index columns: ['officeCode']
+ index_name :location index columns: ['city', 'state', 'postalCode']
+
+
+*************TEST SEVEN, CREATING AN INDEX WITH A DUPLICATE NAME, AND CREATING A SECOND PRIMARY KEY THROWS AN ERROR**************
+
+***ORIGINAL ***
+
+<class 'src.CSVDataTable.CSVDataTable'>: name = Offices
+key columns = : ['officeCode']
+
+Column names = ['officeCode', 'city', 'phone', 'addressLine1', 'addressLine2', 'state', 'country', 'postalCode', 'territory']
+row numbers: 0
+indexes:
+ index_name :PRIMARY index columns: ['officeCode']
+*****You tried to add a duplicate name index*****
+ Wrong type of index
+
+*****You tried to make more than one primary keys*****
+ Wrong type of index
+
+
+*************TEST SIX, CREATE WITH INDEX AND ADD ANOTHER INDEX**************
+
+ We caught an error, you did  notprovide enough information to create the key
+ add_index() missing 1 required positional argument: 'column_list'
