@@ -6,11 +6,11 @@ import json
 
 
 class Index():
-    def __init__(self, index_name, table, index_columns,kind, loadit=None):
+    def __init__(self, index_name, table, index_columns,kind, index_data=None):
         self._index_name = index_name
         self._columns = index_columns
         self._kind = kind 
-        self._index_data = None
+        self._index_data = index_data
         self._table = table
 
     def compute_key(self,row):
@@ -66,7 +66,17 @@ class Index():
         return result
     
     def find_rows(self,tmp):
-        return None
+
+        t_keys = tmp.keys()
+        t_vals = [tmp[k] for k in self._columns]
+        t_s = "_".join(t_vals)
+
+        d = self._index_data.get(t_s,None)
+
+        if d is not None:
+            d = list(d.keys())
+
+        return d 
 
     def get_no_of_entries(self):
         return len(list(self._index_data.keys()))
@@ -76,12 +86,13 @@ class Index():
         bucket = self._index_data.get(index_key,None)
 
         if bucket is not None:
-            bucket.remove(rid)
+            del bucket[rid]
 
             if len(bucket) == 0:
                 del (self._index_data[index_key])
 
 class CSVDataTable():
+    _default_directory = 'DB/'
     
     def debug_message(self, *m):
         """
@@ -104,7 +115,6 @@ class CSVDataTable():
             the columns are ['playerID', 'teamID', 'yearID']
         :param debug: If true, print debug messages.
         """
-        self._default_directory = '/CSVFile/'
         self._primary_key_columns = primary_key_columns
         self._table_name = table_name
         self._column_names = column_names
@@ -121,6 +131,9 @@ class CSVDataTable():
 
             if primary_key_columns:
                 self.add_index("PRIMARY",  column_list = self._primary_key_columns, kind ="PRIMARY")
+        else: 
+            self.load()
+
 
             
     def __str__(self):
@@ -193,46 +206,53 @@ class CSVDataTable():
         return out 
     
 
-    
     def load(self):
 
-        result = []
-        cols = None
-        with open(fn, "r") as infile:
-            rdr = csv.DictReader(infile)
-            cols = rdr.fieldnames
-            for r in rdr:
-                result.append(r)
+        fn = CSVDataTable._default_directory + self._table_name + ".json"
+        with open(fn, 'r') as infile:
+            d = json.load(infile)
 
-        return result, cols
+            state = d['state']
+            self._table_name = state['table_name']
+            self._columns = state['primary_key_columns']
+            self._next_row_id = state['next_rid']
+            self._column_names = state['column_names']
+            self._rows = d['rows']
 
-            
+            for k, v in d['indexes'].items():
+                #idx = Index(loadit=v, table=self)
+                idx = Index(index_name=v['name'], table=self, index_columns=v['columns'], kind=v['kind'], index_data=v['index_data'])
+                if v['kind'] == 'PRIMARY' and self._primary_key_columns is None: 
+                    self._primary_key_columns = v['columns']
+        
+                if self._indexes is None:
+                    self._indexes = {}
+                self._indexes[k] = idx
 
-
+  
     def save(self):
-
         d = {
-            "state":{
-                "table_name" : self._table_name,
-                "primary_key_columns":self._primary_key_columns,
-                "next_rid": self._next_row_id,
-                "column_names": self._column_names
+            "state": {  # state element in this dict are these attributes of the datatable
+                'table_name': self._table_name,
+                'primary_key_columns': self._primary_key_columns,
+                'next_rid': self._next_row_id,
+                'column_names': self._column_names
             }
         }
 
         fn = CSVDataTable._default_directory + self._table_name + ".json"
-        d["rows"] = self._rows
+        d['rows'] = self._rows
 
-        for k,v in self._indexes.items():
-            idxs = d.get("indexes", {})
+        for k, v in self._indexes.items():
+            idxs = d.get('indexes', {})
             idx_string = v.to_json()
             idxs[k] = idx_string
             d['indexes'] = idxs
-        
+
         d = json.dumps(d, indent=2)
-        with open(fn,"w+") as outfile:
+        with open(fn, 'w+') as outfile:
             outfile.write(d)
-    
+
     def _check_keys(self, key_fields): 
         if len(self._primary_key_columns) != len(key_fields):
             raise ValueError("Entered wrong key_fields please try entering " + ",".join(self._primary_key_columns))
@@ -259,6 +279,7 @@ class CSVDataTable():
                 result.append(v)
         else:
             result = None 
+        return result
 
     def _matches_template(self, row,tmp):
         """
@@ -307,44 +328,41 @@ class CSVDataTable():
                             n =k
         return n 
     
-    def find_rows(self,tmp):
-
-        t_keys = tmp.keys()
-        t_vals = [tmp[k] for k in self._column_names]
-        t_s = "_".join(t_vals)
-
-        d = self._index_data.get(t_s,None)
-
-        if d is not None:
-            d = list(d.keys())
-
-        return d 
-
     def find_by_index(self,tmp,idx):
         r = idx.find_rows(tmp)
-        res = [self._rows[k] for k in r]
+        res = {}
+        for k in r:
+            res[k] = self._rows[k]
         return res
     
     def find_by_scan_template(self,tmp,rows):
         result = []
-        for k,v in rows:
-            if self.matches_template(v,tmp):
+        for k,v in rows.items():
+            if self._matches_template(v,tmp):
                 result.append({k:v})
         return result 
 
     def find_by_template(self, tmp, fields= None, use_index =True):       
         
         if tmp is None:
-            new_t = CSVDataTable(table_name = "Derived:" + self._table_name, loadit=True)
-            new_t.load_data(table_name = "Derived:" + self._table_name, rows=self.get_row())
+            new_t = CSVDataTable(table_name = "Derived:" + self._table_name, column_names = self._columns, loadit=False)
+            new_t.load_from_rows(rows=self._rows)
             return new_t
         
         result_rows = self.find_by_template_rows(tmp,fields,use_index)
 
-        new_t = CSVDataTable(table_name ="Derived:" + self._table_name, loadit=True)
-        new_t.load_from_rows(table_name = "Derived:" + self._table_name, rows=result_rows)
+        if fields:
+            new_cols = fields
+        else:
+            new_cols = self._column_names
+            
+        new_t = CSVDataTable(table_name ="Derived:" + self._table_name, column_names = new_cols,  loadit=False)
+        new_t.load_from_rows(rows=result_rows)
 
         return new_t 
+    
+    def load_from_rows(self, rows):
+        self._rows = rows 
 
     def find_by_template_rows(self, tmp, fields=None, use_index=True):
 
@@ -365,10 +383,12 @@ class CSVDataTable():
             final_r = {}
             for r in result:
                 if fields is not None:
-                    final_new_r = {k:r[k] for k in fields}
+                    for key,v in r.items():
+                        final_new_r= {}
+                        final_new_r[key] = {k:v[k] for k in fields}
                 else:
                     final_new_r = r
-                final_r.append(final_new_r)
+                final_r.update(final_new_r)
             return final_r
         
         else: 
@@ -414,7 +434,13 @@ class CSVDataTable():
             for k,v in wc.items():
                 kk = k.split(".")
                 if len(kk)==1:
-                    return None 
+                    result[k] = v
+                elif kk[0] == self._table_name:
+                    result[kk[1]] = v
+        if result == {}:
+            result = None
+        
+        return result 
     
     def _get_specific_project(self, p_clause):
         result = []
@@ -428,7 +454,6 @@ class CSVDataTable():
         if result ==[]:
             result = None
         
-        ###??/
         return result 
 
     
@@ -480,16 +505,13 @@ class CSVDataTable():
                     new_r = {**r,**r2}
                     result.append(new_r)
 
-        tn = "JOIN(" + self._table_name +"," + r.table._table_name + ")"
-        final_result = CSVDataTable(table_name = tn, loadit=True)
-        final_result.load_from_rows(table_name = tn, rows=result)
+        tn = "JOIN(" + self._table_name +"," + r_table._table_name + ")"
+        final_result = CSVDataTable(table_name = tn, column_names=p_clause, loadit=False)
+        final_result.load_from_rows(rows=result)
 
         ###Apply template to result??? 
 
-        return join_result
-
-
-
+        return final_result
 
     def delete(self, template):
         """
@@ -499,8 +521,8 @@ class CSVDataTable():
         :param template: A template.
         :return: A count of the rows deleted.
         """
-        res = self.find_by_template_rows(tmp)
-        rows = result 
+        res = self.find_by_template_rows(template)
+        rows = res 
         
         if rows is not None:
             for k in rows.keys():
@@ -509,7 +531,8 @@ class CSVDataTable():
     def _remove_row(self,rid):
 
         r=self._rows[rid]
-        for n,idx in self._indexes.items():
-            idx.delete_from_index(r,rid)
+        if self._indexes is not None:
+            for n,idx in self._indexes.items():
+                idx.delete_from_index(r,rid)
 
         del[self._rows[rid]]
