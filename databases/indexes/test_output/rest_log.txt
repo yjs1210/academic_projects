@@ -4,7 +4,8 @@
 
 
 
-*************TEST ONE, TEST LOAD FUNCTIOn**************
+*************TEST ONE, TEST LOAD FUNCTION**************
+*** HERE WE TEST THE IMPORT_DATA FUNCTION WHICH LEVEREAGES INSERT. LATER WE ALSO TEST LOADIT = TRUE AND THE LOAD FUNCTION***
 T =  <class 'src.CSVDataTable.CSVDataTable'>: name = People
 key columns = : ['playerID']
 
@@ -12,6 +13,25 @@ Column names = ['playerID', 'birthYear', 'birthMonth', 'birthDay', 'birthCountry
 row numbers: 19370
 indexes:
  index_name :PRIMARY index columns: ['playerID']
+
+
+*************TEST TWO,  FIND BY TEMPLATE AND COMPARE RUN TIME WITH INDEX vs WITHOUT**************
+
+***TESTING RUN WITHOUT INDEX***
+Row =  <class 'src.CSVDataTable.CSVDataTable'>: name = Derived:People
+key columns = : None
+
+Column names = ['playerID', 'birthYear', 'birthMonth', 'birthDay', 'birthCountry', 'birthState', 'birthCity', 'deathYear', 'deathMonth', 'deathDay', 'deathCountry', 'deathState', 'deathCity', 'nameFirst', 'nameLast', 'nameGiven', 'weight', 'height', 'bats', 'throws', 'debut', 'finalGame', 'retroID', 'bbrefID']
+row numbers: 1
+Elapsed time= 0.2852015495300293
+
+***TESTING RUNNING WITH INDEX***
+Row =  <class 'src.CSVDataTable.CSVDataTable'>: name = Derived:People
+key columns = : None
+
+Column names = ['playerID', 'birthYear', 'birthMonth', 'birthDay', 'birthCountry', 'birthState', 'birthCity', 'deathYear', 'deathMonth', 'deathDay', 'deathCountry', 'deathState', 'deathCity', 'nameFirst', 'nameLast', 'nameGiven', 'weight', 'height', 'bats', 'throws', 'debut', 'finalGame', 'retroID', 'bbrefID']
+row numbers: 1
+Elapsed time =  0.0
 
 
 *************TEST THREE CREATING A CSVDATATABLE OBJECT**************
@@ -78,7 +98,322 @@ indexes:
  Wrong type of index
 
 
-*************TEST SIX, CREATE WITH INDEX AND ADD ANOTHER INDEX**************
+*************TEST EIGHT, NOT ENOUGH INFORMATION TO CREATE INDEX THROWS AN ERROR**************
 
- We caught an error, you did  notprovide enough information to create the key
+ We caught an error, you did  not provide enough information to create the key
  add_index() missing 1 required positional argument: 'column_list'
+
+
+*************TEST NINE, DELETE WORKS SUCCESSFULLY**************
+
+ **ORIGINAL META DATA BEFORE WE RUN DELETE, 10 ROWS**
+
+<class 'src.CSVDataTable.CSVDataTable'>: name = Offices
+key columns = : ['officeCode']
+
+Column names = ['officeCode', 'city', 'phone', 'addressLine1', 'addressLine2', 'state', 'country', 'postalCode', 'territory']
+row numbers: 10
+indexes:
+ index_name :PRIMARY index columns: ['officeCode']
+
+ **DELETING CAMBRIDGE**
+
+
+ **DATA AFTER DELETING CAMBRIDGE, 9 ROWS**
+
+<class 'src.CSVDataTable.CSVDataTable'>: name = Offices
+key columns = : ['officeCode']
+
+Column names = ['officeCode', 'city', 'phone', 'addressLine1', 'addressLine2', 'state', 'country', 'postalCode', 'territory']
+row numbers: 9
+indexes:
+ index_name :PRIMARY index columns: ['officeCode']
+
+
+*************TEST TEN, SAVE AND LOAD**************
+
+ ***READING CSV TO LOAD OFFICES.CSV
+
+ ***SAVING DOWN THE CSVDATATABLE
+TABLE INFO AND ITS INDEXES
+
+<class 'src.CSVDataTable.CSVDataTable'>: name = Offices
+key columns = : ['officeCode']
+
+Column names = ['officeCode', 'city', 'phone', 'addressLine1', 'addressLine2', 'state', 'country', 'postalCode', 'territory']
+row numbers: 10
+indexes:
+ index_name :PRIMARY index columns: ['officeCode']
+{'name': 'PRIMARY', 'columns': ['officeCode'], 'kind': 'PRIMARY', 'table_name': 'Offices', 'index_data': {'1': {2: OrderedDict([('officeCode', '1'), ('city', 'San Francisco'), ('phone', '+1 650 219 4782'), ('addressLine1', '100 Market Street'), ('addressLine2', 'Suite 300'), ('state', 'CA'), ('country', 'USA'), ('postalCode', '94080'), ('territory', 'NA')])}, '11': {3: OrderedDict([('officeCode', '11'), ('city', 'Cambridge'), ('phone', '+1 617 555 1212'), ('addressLine1', 'Kendall Square'), ('addressLine2', ''), ('state', 'MA'), ('country', 'USA'), ('postalCode', '02102'), ('territory', 'NA')])}, '2': {4: OrderedDict([('officeCode', '2'), ('city', 'Boston'), ('phone', '+1 215 837 0825'), ('addressLine1', '1550 Court Place'), ('addressLine2', 'Suite 102'), ('state', 'MA'), ('country', 'USA'), ('postalCode', '02107'), ('territory', 'NA')])}, '3': {5: OrderedDict([('officeCode', '3'), ('city', 'NYC'), ('phone', '+1 212 555 3000'), ('addressLine1', '523 East 53rd Street'), ('addressLine2', 'apt. 5A'), ('state', 'NY'), ('country', 'USA'), ('postalCode', '10022'), ('territory', 'NA')])}, '4': {6: OrderedDict([('officeCode', '4'), ('city', 'Paris'), ('phone', '+33 14 723 4404'), ('addressLine1', "43 Rue Jouffroy D'abbans"), ('addressLine2', ''), ('state', ''), ('country', 'France'), ('postalCode', '75017'), ('territory', 'EMEA')])}, '5': {7: OrderedDict([('officeCode', '5'), ('city', 'Tokyo'), ('phone', '+81 33 224 5000'), ('addressLine1', '4-1 Kioicho'), ('addressLine2', ''), ('state', 'Chiyoda-Ku'), ('country', 'Japan'), ('postalCode', '102-8578'), ('territory', 'Japan')])}, '6': {8: OrderedDict([('officeCode', '6'), ('city', 'Sydney'), ('phone', '+61 2 9264 2451'), ('addressLine1', '5-11 Wentworth Avenue'), ('addressLine2', 'Floor #2'), ('state', ''), ('country', 'Australia'), ('postalCode', 'NSW 2010'), ('territory', 'APAC')])}, '7': {9: OrderedDict([('officeCode', '7'), ('city', 'London'), ('phone', '+44 20 7877 2041'), ('addressLine1', '25 Old Broad Street'), ('addressLine2', 'Level 7'), ('state', ''), ('country', 'UK'), ('postalCode', 'EC2N 1HN'), ('territory', 'EMEA')])}, '8': {10: OrderedDict([('officeCode', '8'), ('city', 'New York'), ('phone', '+1 212 555-1212'), ('addressLine1', 'W 166th Street'), ('addressLine2', 'and Broadway'), ('state', 'NY'), ('country', 'USA'), ('postalCode', '10027'), ('territory', 'NA')])}, '9': {11: OrderedDict([('officeCode', '9'), ('city', 'Boston'), ('phone', '+1 617 555 1212'), ('addressLine1', '1 Government Plaza'), ('addressLine2', ''), ('state', ''), ('country', 'USA'), ('postalCode', '02101'), ('territory', 'NA')])}}}
+
+ ***LOADING CSV DATATABLE***
+
+ **TABLE LOADED CONFIRM THEY ARE THE SAME**
+
+<class 'src.CSVDataTable.CSVDataTable'>: name = Offices
+key columns = : ['officeCode']
+
+Column names = ['officeCode', 'city', 'phone', 'addressLine1', 'addressLine2', 'state', 'country', 'postalCode', 'territory']
+row numbers: 10
+indexes:
+ index_name :PRIMARY index columns: ['officeCode']
+
+ ***CONFIRM INDEX INTEGRITY***
+{'name': 'PRIMARY', 'columns': ['officeCode'], 'kind': 'PRIMARY', 'table_name': 'Offices', 'index_data': {'1': {'2': {'officeCode': '1', 'city': 'San Francisco', 'phone': '+1 650 219 4782', 'addressLine1': '100 Market Street', 'addressLine2': 'Suite 300', 'state': 'CA', 'country': 'USA', 'postalCode': '94080', 'territory': 'NA'}}, '11': {'3': {'officeCode': '11', 'city': 'Cambridge', 'phone': '+1 617 555 1212', 'addressLine1': 'Kendall Square', 'addressLine2': '', 'state': 'MA', 'country': 'USA', 'postalCode': '02102', 'territory': 'NA'}}, '2': {'4': {'officeCode': '2', 'city': 'Boston', 'phone': '+1 215 837 0825', 'addressLine1': '1550 Court Place', 'addressLine2': 'Suite 102', 'state': 'MA', 'country': 'USA', 'postalCode': '02107', 'territory': 'NA'}}, '3': {'5': {'officeCode': '3', 'city': 'NYC', 'phone': '+1 212 555 3000', 'addressLine1': '523 East 53rd Street', 'addressLine2': 'apt. 5A', 'state': 'NY', 'country': 'USA', 'postalCode': '10022', 'territory': 'NA'}}, '4': {'6': {'officeCode': '4', 'city': 'Paris', 'phone': '+33 14 723 4404', 'addressLine1': "43 Rue Jouffroy D'abbans", 'addressLine2': '', 'state': '', 'country': 'France', 'postalCode': '75017', 'territory': 'EMEA'}}, '5': {'7': {'officeCode': '5', 'city': 'Tokyo', 'phone': '+81 33 224 5000', 'addressLine1': '4-1 Kioicho', 'addressLine2': '', 'state': 'Chiyoda-Ku', 'country': 'Japan', 'postalCode': '102-8578', 'territory': 'Japan'}}, '6': {'8': {'officeCode': '6', 'city': 'Sydney', 'phone': '+61 2 9264 2451', 'addressLine1': '5-11 Wentworth Avenue', 'addressLine2': 'Floor #2', 'state': '', 'country': 'Australia', 'postalCode': 'NSW 2010', 'territory': 'APAC'}}, '7': {'9': {'officeCode': '7', 'city': 'London', 'phone': '+44 20 7877 2041', 'addressLine1': '25 Old Broad Street', 'addressLine2': 'Level 7', 'state': '', 'country': 'UK', 'postalCode': 'EC2N 1HN', 'territory': 'EMEA'}}, '8': {'10': {'officeCode': '8', 'city': 'New York', 'phone': '+1 212 555-1212', 'addressLine1': 'W 166th Street', 'addressLine2': 'and Broadway', 'state': 'NY', 'country': 'USA', 'postalCode': '10027', 'territory': 'NA'}}, '9': {'11': {'officeCode': '9', 'city': 'Boston', 'phone': '+1 617 555 1212', 'addressLine1': '1 Government Plaza', 'addressLine2': '', 'state': '', 'country': 'USA', 'postalCode': '02101', 'territory': 'NA'}}}}
+
+
+*************TEST ELEVEN JOIN AND ALSO SEE THAT IT SWAPS TABLESX**************
+T =  <class 'src.CSVDataTable.CSVDataTable'>: name = People
+key columns = : ['playerID']
+
+Column names = ['playerID', 'birthYear', 'birthMonth', 'birthDay', 'birthCountry', 'birthState', 'birthCity', 'deathYear', 'deathMonth', 'deathDay', 'deathCountry', 'deathState', 'deathCity', 'nameFirst', 'nameLast', 'nameGiven', 'weight', 'height', 'bats', 'throws', 'debut', 'finalGame', 'retroID', 'bbrefID']
+row numbers: 19370
+indexes:
+ index_name :PRIMARY index columns: ['playerID']
+T2 =  <class 'src.CSVDataTable.CSVDataTable'>: name = Batting
+key columns = : ['playerID', 'teamID', 'yearID', 'stint']
+
+Column names = ['playerID', 'yearID', 'stint', 'teamID', 'lgID', 'G', 'AB', 'R', 'H', '2B', '3B', 'HR', 'RBI', 'SB', 'CS', 'BB', 'SO', 'IBB', 'HBP', 'SH', 'SF', 'GIDP']
+row numbers: 104324
+indexes:
+ index_name :PRIMARY index columns: ['playerID', 'teamID', 'yearID', 'stint']
+SWAPPED
+Result =  <class 'src.CSVDataTable.CSVDataTable'>: name = JOIN(Batting,People)
+key columns = : None
+
+Column names = ['playerID', 'People.nameLast', 'People.nameFirst', 'Batting.teamID', 'Batting.yearID', 'Batting.stint', 'Batting.H', 'Batting.AB']
+row numbers: 21
+All rows =  [
+  {
+    "playerID": "willite01",
+    "nameLast": "Williams",
+    "nameFirst": "Ted",
+    "teamID": "BOS",
+    "yearID": "1939",
+    "stint": "1",
+    "H": "185",
+    "AB": "565"
+  },
+  {
+    "playerID": "willite01",
+    "nameLast": "Williams",
+    "nameFirst": "Ted",
+    "teamID": "BOS",
+    "yearID": "1940",
+    "stint": "1",
+    "H": "193",
+    "AB": "561"
+  },
+  {
+    "playerID": "willite01",
+    "nameLast": "Williams",
+    "nameFirst": "Ted",
+    "teamID": "BOS",
+    "yearID": "1941",
+    "stint": "1",
+    "H": "185",
+    "AB": "456"
+  },
+  {
+    "playerID": "willite01",
+    "nameLast": "Williams",
+    "nameFirst": "Ted",
+    "teamID": "BOS",
+    "yearID": "1942",
+    "stint": "1",
+    "H": "186",
+    "AB": "522"
+  },
+  {
+    "playerID": "willite01",
+    "nameLast": "Williams",
+    "nameFirst": "Ted",
+    "teamID": "BOS",
+    "yearID": "1946",
+    "stint": "1",
+    "H": "176",
+    "AB": "514"
+  },
+  {
+    "playerID": "willite01",
+    "nameLast": "Williams",
+    "nameFirst": "Ted",
+    "teamID": "BOS",
+    "yearID": "1947",
+    "stint": "1",
+    "H": "181",
+    "AB": "528"
+  },
+  {
+    "playerID": "willite01",
+    "nameLast": "Williams",
+    "nameFirst": "Ted",
+    "teamID": "BOS",
+    "yearID": "1948",
+    "stint": "1",
+    "H": "188",
+    "AB": "509"
+  },
+  {
+    "playerID": "willite01",
+    "nameLast": "Williams",
+    "nameFirst": "Ted",
+    "teamID": "BOS",
+    "yearID": "1949",
+    "stint": "1",
+    "H": "194",
+    "AB": "566"
+  },
+  {
+    "playerID": "willite01",
+    "nameLast": "Williams",
+    "nameFirst": "Ted",
+    "teamID": "BOS",
+    "yearID": "1950",
+    "stint": "1",
+    "H": "106",
+    "AB": "334"
+  },
+  {
+    "playerID": "willite01",
+    "nameLast": "Williams",
+    "nameFirst": "Ted",
+    "teamID": "BOS",
+    "yearID": "1951",
+    "stint": "1",
+    "H": "169",
+    "AB": "531"
+  },
+  {
+    "playerID": "willite01",
+    "nameLast": "Williams",
+    "nameFirst": "Ted",
+    "teamID": "BOS",
+    "yearID": "1952",
+    "stint": "1",
+    "H": "4",
+    "AB": "10"
+  },
+  {
+    "playerID": "willite01",
+    "nameLast": "Williams",
+    "nameFirst": "Ted",
+    "teamID": "BOS",
+    "yearID": "1953",
+    "stint": "1",
+    "H": "37",
+    "AB": "91"
+  },
+  {
+    "playerID": "willite01",
+    "nameLast": "Williams",
+    "nameFirst": "Ted",
+    "teamID": "BOS",
+    "yearID": "1954",
+    "stint": "1",
+    "H": "133",
+    "AB": "386"
+  },
+  {
+    "playerID": "willite01",
+    "nameLast": "Williams",
+    "nameFirst": "Ted",
+    "teamID": "BOS",
+    "yearID": "1955",
+    "stint": "1",
+    "H": "114",
+    "AB": "320"
+  },
+  {
+    "playerID": "willite01",
+    "nameLast": "Williams",
+    "nameFirst": "Ted",
+    "teamID": "BOS",
+    "yearID": "1956",
+    "stint": "1",
+    "H": "138",
+    "AB": "400"
+  },
+  {
+    "playerID": "willite01",
+    "nameLast": "Williams",
+    "nameFirst": "Ted",
+    "teamID": "BOS",
+    "yearID": "1957",
+    "stint": "1",
+    "H": "163",
+    "AB": "420"
+  },
+  {
+    "playerID": "willite01",
+    "nameLast": "Williams",
+    "nameFirst": "Ted",
+    "teamID": "BOS",
+    "yearID": "1958",
+    "stint": "1",
+    "H": "135",
+    "AB": "411"
+  },
+  {
+    "playerID": "willite01",
+    "nameLast": "Williams",
+    "nameFirst": "Ted",
+    "teamID": "BOS",
+    "yearID": "1959",
+    "stint": "1",
+    "H": "69",
+    "AB": "272"
+  },
+  {
+    "playerID": "willite01",
+    "nameLast": "Williams",
+    "nameFirst": "Ted",
+    "teamID": "BOS",
+    "yearID": "1960",
+    "stint": "1",
+    "H": "98",
+    "AB": "310"
+  },
+  {
+    "playerID": "willitr01",
+    "nameLast": "Williams",
+    "nameFirst": "Trevor",
+    "teamID": "PIT",
+    "yearID": "2016",
+    "stint": "1",
+    "H": "0",
+    "AB": "1"
+  },
+  {
+    "playerID": "willitr01",
+    "nameLast": "Williams",
+    "nameFirst": "Trevor",
+    "teamID": "PIT",
+    "yearID": "2017",
+    "stint": "1",
+    "H": "2",
+    "AB": "41"
+  }
+]
+
+
+*************TEST TWELEVE WE DELETE WITH MULTIPLE WHERE CONDITIONS AND ON A LARGER DB**************
+
+ **ORIGINAL META DATA BEFORE WE RUN DELETE**
+
+<class 'src.CSVDataTable.CSVDataTable'>: name = Batting
+key columns = : None
+
+Column names = ['playerID', 'yearID', 'stint', 'teamID', 'lgID', 'G', 'AB', 'R', 'H', '2B', '3B', 'HR', 'RBI', 'SB', 'CS', 'BB', 'SO', 'IBB', 'HBP', 'SH', 'SF', 'GIDP']
+row numbers: 104324
+
+ **DELETING yearID = 2017 and teamID = BOS FOR ALL BATTING RECORDS, 50 LESS ROWS**
+
+
+ **DATA AFTER DELETING*
+
+<class 'src.CSVDataTable.CSVDataTable'>: name = Batting
+key columns = : None
+
+Column names = ['playerID', 'yearID', 'stint', 'teamID', 'lgID', 'G', 'AB', 'R', 'H', '2B', '3B', 'HR', 'RBI', 'SB', 'CS', 'BB', 'SO', 'IBB', 'HBP', 'SH', 'SF', 'GIDP']
+row numbers: 104275
