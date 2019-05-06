@@ -5,3 +5,11 @@ summary(fit_gam)
 
 
 summary(lm(cigs~., data=df))
+
+
+df<-read.table('/Users/james.lee/AnacondaProjects/academic_projects/statistical-inference/falls.txt', header = TRUE)
+
+hist(df$falls_past12mo)
+
+df$falls_past12mo
+df$days
